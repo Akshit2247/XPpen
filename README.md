@@ -3,7 +3,7 @@
 A lightweight (< 300 lines total) simulation of XP-Pen hardware digitizers with 2nd-order spring-damper nib dynamics and 8,192 pressure levels.
 
 ## 🌐 Live Web Simulator
-👉 **[https://akshit2247.github.io/XPpen/](https://akshit2247.github.io/XPpen/)**
+👉 **[https://akshit2247.github.io/XPpen/](https://akshit2247.github.io/XPpen/web)**
 
 ## ⚡ Features
 - **Spring-Mass-Damper Mechanics**: Eliminates robotic linework by simulating nib inertia, spring stiffness ($k$), and damping ($c$).
