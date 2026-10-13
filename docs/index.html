@@ -1,80 +1,366 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0">
-  <title>XP·PEN Hardware Stylus Simulation</title>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>XP·PEN Digital Stylus Simulator (Mouse-Adaptive 8192 LPI)</title>
   <style>
-    *{box-sizing:border-box;margin:0;padding:0;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;user-select:none}
-    body{background:#0c0d10;color:#d6dae5;height:100vh;display:flex;flex-direction:column;overflow:hidden}
-    header{height:42px;background:#14151a;border-bottom:1px solid #242732;display:flex;align-items:center;justify-content:space-between;padding:0 14px}
-    .brand{font-size:14px;font-weight:800;color:#fff}.brand span{color:#e50012}
-    .badge{background:#1a1c22;border:1px solid #2e3340;font-size:10px;padding:2px 7px;border-radius:3px;color:#10b981;font-family:monospace}
-    .bar{height:40px;background:#181a21;border-bottom:1px solid #242732;display:flex;align-items:center;justify-content:space-between;padding:0 14px;gap:10px;font-size:11px;font-weight:600}
-    .ctl{display:flex;align-items:center;gap:12px}
-    input[type=range]{width:75px;accent-color:#e50012;height:3px;cursor:pointer}
-    button{background:#232630;border:1px solid #333845;color:#fff;font-size:11px;font-weight:600;padding:4px 9px;border-radius:3px;cursor:pointer}
-    button:hover{background:#2c303d}.btn-red{background:#e50012;border-color:#e50012}.btn-red:hover{background:#ff1a2b}
-    main{flex:1;position:relative;background:radial-gradient(circle at center,#16181f 0%,#0c0d10 100%);overflow:hidden;cursor:crosshair}
-    canvas{position:absolute;inset:0;width:100%;height:100%;touch-action:none}
-    .hud{position:absolute;bottom:12px;left:14px;display:flex;gap:8px;pointer-events:none}
-    .box{background:rgba(18,20,26,.9);border:1px solid #2a2e3a;padding:5px 10px;border-radius:3px;font-size:11px;display:flex;align-items:center;gap:6px}
-    .box span{color:#82899a}.box strong{font-family:monospace;color:#fff}
-    .p-bar{width:80px;height:6px;background:#090a0d;border-radius:2px;overflow:hidden;border:1px solid #2c303c}
-    .p-fill{height:100%;width:0%;background:linear-gradient(90deg,#10b981,#f59e0b,#e50012)}
-    .hint{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);color:#3a3e4d;font-size:12px;font-weight:600;pointer-events:none}
+    :root {
+      --bg-dark: #0e1014;
+      --bg-panel: #16181f;
+      --bg-card: #20232c;
+      --border: #2c303c;
+      --xppen-red: #e50012;
+      --text-main: #f0f2f5;
+      --text-muted: #838a9c;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; user-select: none; }
+    body { background-color: var(--bg-dark); color: var(--text-main); height: 100vh; display: flex; flex-direction: column; overflow: hidden; }
+
+    /* Title Bar */
+    header { height: 44px; background: #121318; border-bottom: 1px solid var(--border); display: flex; align-items: center; justify-content: space-between; padding: 0 16px; flex-shrink: 0; }
+    .brand { display: flex; align-items: center; gap: 8px; font-weight: 800; font-size: 15px; letter-spacing: -0.5px; }
+    .brand-red { color: var(--xppen-red); }
+    .badge { background: #1b1e26; border: 1px solid #333846; font-size: 11px; padding: 3px 9px; border-radius: 4px; color: #10b981; font-family: monospace; display: flex; align-items: center; gap: 6px; }
+    .badge-dot { width: 6px; height: 6px; border-radius: 50%; background: #10b981; box-shadow: 0 0 6px #10b981; }
+
+    /* Toolbar */
+    .toolbar { height: 46px; background: var(--bg-panel); border-bottom: 1px solid var(--border); display: flex; align-items: center; justify-content: space-between; padding: 0 16px; gap: 12px; font-size: 12px; font-weight: 600; flex-shrink: 0; }
+    .tool-group { display: flex; align-items: center; gap: 14px; }
+    .tool-label { display: flex; align-items: center; gap: 6px; color: var(--text-muted); }
+    .tool-label span { color: var(--text-main); font-family: monospace; }
+    input[type=range] { width: 75px; height: 4px; accent-color: var(--xppen-red); cursor: pointer; }
+    
+    .btn { background: var(--bg-card); border: 1px solid var(--border); color: #fff; font-size: 11px; font-weight: 600; padding: 5px 12px; border-radius: 4px; cursor: pointer; transition: all 0.15s; }
+    .btn:hover { background: #2c303c; border-color: #434858; }
+    .btn-red { background: var(--xppen-red); border-color: var(--xppen-red); }
+    .btn-red:hover { background: #ff1a2b; border-color: #ff1a2b; }
+
+    /* Drawing Surface */
+    main { flex: 1; position: relative; background: radial-gradient(circle at center, #171922 0%, #0c0d11 100%); overflow: hidden; cursor: crosshair; }
+    canvas { position: absolute; inset: 0; width: 100%; height: 100%; touch-action: none; }
+
+    /* On-Screen Tablet Framing */
+    .tablet-frame { position: absolute; inset: 24px; border: 1px solid rgba(255, 255, 255, 0.05); border-radius: 8px; pointer-events: none; }
+    .corner { position: absolute; width: 16px; height: 16px; border-color: #3f4454; border-style: solid; }
+    .corner.tl { top: 0; left: 0; border-width: 2px 0 0 2px; }
+    .corner.tr { top: 0; right: 0; border-width: 2px 2px 0 0; }
+    .corner.bl { bottom: 0; left: 0; border-width: 0 0 2px 2px; }
+    .corner.br { bottom: 0; right: 0; border-width: 0 2px 2px 0; }
+
+    /* Live Telemetry HUD */
+    .hud { position: absolute; bottom: 36px; left: 36px; display: flex; gap: 10px; pointer-events: none; }
+    .hud-card { background: rgba(18, 20, 26, 0.92); border: 1px solid var(--border); padding: 7px 12px; border-radius: 5px; font-size: 11px; display: flex; align-items: center; gap: 8px; box-shadow: 0 4px 16px rgba(0,0,0,0.4); }
+    .hud-card span { color: var(--text-muted); }
+    .hud-card strong { font-family: monospace; color: #fff; }
+    
+    .pressure-track { width: 110px; height: 7px; background: #0c0d10; border-radius: 2px; overflow: hidden; border: 1px solid #333; }
+    .pressure-fill { height: 100%; width: 0%; background: linear-gradient(90deg, #10b981 0%, #f59e0b 60%, var(--xppen-red) 100%); transition: width 0.03s linear; }
+
+    .hint { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); color: #353947; font-size: 13px; font-weight: 700; letter-spacing: 0.8px; pointer-events: none; text-align: center; line-height: 1.6; }
+    .hint small { font-size: 11px; color: #4b5163; display: block; font-weight: 500; }
   </style>
 </head>
 <body>
+
+  <!-- Title Bar -->
   <header>
-    <div class="brand">XP<span>·PEN</span> <small style="color:#787f91;font-weight:400;font-size:10px">Digitizer Physics</small></div>
-    <div class="badge">● 8192 LPI Online</div>
-  </header>
-  <div class="bar">
-    <div class="ctl">
-      <label>Feel: <input type="range" id="feel" min="0.3" max="2.0" step="0.1" value="1.0"></label>
-      <label>Spring k: <input type="range" id="spk" min="0.1" max="1.0" step="0.05" value="0.45"></label>
-      <input type="color" id="col" value="#e50012" style="width:20px;height:20px;border:none;background:none;cursor:pointer">
+    <div class="brand">
+      <span>XP<span class="brand-red">·PEN</span></span>
+      <span style="font-size:11px;color:#888f9e;font-weight:400">Hardware Digitizer Simulator</span>
     </div>
-    <div class="ctl">
-      <button class="btn-red" id="btn-orb">⚡ Physics Orbit</button>
-      <button id="btn-clr">🧹 Clear</button>
+    <div class="badge">
+      <span class="badge-dot"></span>
+      <span id="hw-status">Mouse Velocity Dynamics Active (8,192 Levels)</span>
+    </div>
+  </header>
+
+  <!-- Toolbar Controls -->
+  <div class="toolbar">
+    <div class="tool-group">
+      <label class="tool-label">Speed Sensitivity: <input type="range" id="sensitivity" min="0.5" max="3.0" step="0.1" value="1.4"></label>
+      <label class="tool-label">Spring Nib (k): <input type="range" id="spring-k" min="0.15" max="0.95" step="0.05" value="0.45"></label>
+      <label class="tool-label">Ink: <input type="color" id="ink-color" value="#e50012" style="width:22px;height:22px;border:none;background:none;cursor:pointer"></label>
+    </div>
+    <div class="tool-group">
+      <button class="btn btn-red" id="btn-orbit" title="Simulate physical pendulum spirograph">⚡ Physics Orbit</button>
+      <button class="btn" id="btn-undo">↩ Undo</button>
+      <button class="btn" id="btn-clear">🧹 Clear</button>
+      <button class="btn" id="btn-export">💾 Save SVG</button>
     </div>
   </div>
+
+  <!-- Drawing Surface -->
   <main>
     <canvas id="cv"></canvas>
-    <div class="hint" id="hint">DRAW WITH STYLUS OR MOUSE • 8192 PRESSURE</div>
+    
+    <!-- Tablet Graphic Overlay -->
+    <div class="tablet-frame">
+      <div class="corner tl"></div><div class="corner tr"></div>
+      <div class="corner bl"></div><div class="corner br"></div>
+    </div>
+
+    <!-- Center Prompt -->
+    <div class="hint" id="hint">
+      DRAW WITH MOUSE OR STYLUS
+      <small>• Move slow for thick ink, flick fast for sharp tapered hairlines<br>• Scroll mouse wheel to dynamically adjust line weight</small>
+    </div>
+
+    <!-- Real-time HUD -->
     <div class="hud">
-      <div class="box"><span>Pressure:</span><div class="p-bar"><div class="p-fill" id="bf"></div></div><strong id="hp">0 / 8192</strong></div>
-      <div class="box"><span>Lag:</span><strong id="hl">0.0 px</strong></div>
-      <div class="box"><span>Tilt:</span><strong id="ht">0°</strong></div>
+      <div class="hud-card">
+        <span>Pressure:</span>
+        <div class="pressure-track"><div class="pressure-fill" id="hud-bar"></div></div>
+        <strong id="hud-pressure">0 / 8192</strong>
+      </div>
+      <div class="hud-card">
+        <span>Speed:</span>
+        <strong id="hud-speed">0 px/s</strong>
+      </div>
+      <div class="hud-card">
+        <span>Wheel Boost:</span>
+        <strong id="hud-wheel">1.0x</strong>
+      </div>
     </div>
   </main>
+
   <script>
-    const cv=document.getElementById('cv'),ctx=cv.getContext('2d'),bf=document.getElementById('bf'),hp=document.getElementById('hp'),hl=document.getElementById('hl'),ht=document.getElementById('ht'),hint=document.getElementById('hint');
-    let pen={x:0,y:0,vx:0,vy:0,p:0,down:false},tgt={x:0,y:0,rawP:0,tilt:0},strokes=[],act=[],aid=null;
-    function rsz(){cv.width=cv.clientWidth*devicePixelRatio;cv.height=cv.clientHeight*devicePixelRatio;ctx.scale(devicePixelRatio,devicePixelRatio);redr()}
-    window.addEventListener('resize',rsz);setTimeout(rsz,40);
-    function loop(){
-      const k=+document.getElementById('spk').value,feel=+document.getElementById('feel').value;
-      const dx=tgt.x-pen.x,dy=tgt.y-pen.y;
-      pen.vx+=(k*dx*60-0.35*pen.vx*30)*0.016;pen.vy+=(k*dy*60-0.35*pen.vy*30)*0.016;
-      pen.x+=pen.vx*0.016;pen.y+=pen.vy*0.016;
-      pen.p+=0.25*(Math.pow(Math.max(0,Math.min(1,tgt.rawP)),feel)-pen.p);
-      if(pen.down&&Math.hypot(dx,dy)>0.1){act.push({x:pen.x,y:pen.y,p:pen.p,c:document.getElementById('col').value});seg(act)}
-      hp.textContent=`${Math.round(pen.p*8191)} / 8192`;bf.style.width=`${Math.round(pen.p*100)}%`;
-      hl.textContent=`${Math.hypot(dx,dy).toFixed(1)} px`;ht.textContent=`${Math.round(tgt.tilt)}°`;
-      requestAnimationFrame(loop);
+    const cv = document.getElementById('cv');
+    const ctx = cv.getContext('2d');
+    const hudBar = document.getElementById('hud-bar');
+    const hudPressure = document.getElementById('hud-pressure');
+    const hudSpeed = document.getElementById('hud-speed');
+    const hudWheel = document.getElementById('hud-wheel');
+    const hint = document.getElementById('hint');
+
+    // Physical Pen State (2nd-order spring-damper tracking)
+    let pen = { x: 0, y: 0, vx: 0, vy: 0, p: 0, isDown: false };
+    let mouse = { x: 0, y: 0, lastX: 0, lastY: 0, lastTime: 0, speed: 0, rawP: 0 };
+    let wheelScale = 1.0;
+    let strokes = [], currentStroke = [], orbitAnim = null;
+
+    // Retina / High-DPI canvas resizing
+    function resize() {
+      const rect = cv.getBoundingClientRect();
+      const dpr = window.devicePixelRatio || 1;
+      cv.width = rect.width * dpr;
+      cv.height = rect.height * dpr;
+      ctx.scale(dpr, dpr);
+      redraw();
     }
-    requestAnimationFrame(loop);
-    function seg(s){if(s.length<2)return;const a=s[s.length-2],b=s[s.length-1];ctx.strokeStyle=b.c;ctx.lineCap='round';ctx.lineWidth=Math.max(1.2,b.p*13);ctx.beginPath();ctx.moveTo(a.x,a.y);ctx.lineTo(b.x,b.y);ctx.stroke()}
-    function redr(){ctx.clearRect(0,0,cv.width,cv.height);for(const s of strokes){for(let i=1;i<s.length;i++)seg(s.slice(0,i+1))}}
-    cv.addEventListener('pointerdown',e=>{e.preventDefault();cv.setPointerCapture(e.pointerId);hint.style.display='none';tgt.x=pen.x=e.clientX;tgt.y=pen.y=e.clientY;tgt.rawP=(e.pointerType==='pen'&&e.pressure>0)?e.pressure:0.6;tgt.tilt=Math.hypot(e.tiltX||0,e.tiltY||0);pen.down=true;act=[{x:pen.x,y:pen.y,p:tgt.rawP,c:document.getElementById('col').value}]});
-    cv.addEventListener('pointermove',e=>{if(!pen.down)return;tgt.x=e.clientX;tgt.y=e.clientY;tgt.rawP=(e.pointerType==='pen'&&e.pressure>0)?e.pressure:0.6;tgt.tilt=Math.hypot(e.tiltX||0,e.tiltY||0)});
-    const stp=()=>{if(pen.down&&act.length>1)strokes.push([...act]);pen.down=false;tgt.rawP=0;act=[]};
-    cv.addEventListener('pointerup',stp);cv.addEventListener('pointercancel',stp);
-    document.getElementById('btn-orb').addEventListener('click',()=>{hint.style.display='none';if(aid)cancelAnimationFrame(aid);const cx=cv.clientWidth/2,cy=cv.clientHeight/2;let s=0;act=[];pen.down=true;
-      function tk(){const t=s*0.035;tgt.x=cx+200*Math.sin(2*t)*Math.exp(-0.0006*s);tgt.y=cy+120*Math.sin(3*t+1.57)*Math.exp(-0.0006*s);tgt.rawP=0.25+0.65*Math.sin(t*1.5);s++;if(s<750)aid=requestAnimationFrame(tk);else stp()}tk()});
-    document.getElementById('btn-clr').addEventListener('click',()=>{strokes=[];act=[];redr();hint.style.display='block'});
+    window.addEventListener('resize', resize);
+    setTimeout(resize, 40);
+
+    // Physical integration loop (runs at 60Hz)
+    function physicsTick() {
+      const k = parseFloat(document.getElementById('spring-k').value);
+      const sensitivity = parseFloat(document.getElementById('sensitivity').value);
+
+      // 1. Spring-mass-damper acceleration: a = k*(mouse - pen) - c*v
+      const dx = mouse.x - pen.x;
+      const dy = mouse.y - pen.y;
+      const ax = k * dx * 60 - 0.38 * pen.vx * 30;
+      const ay = k * dy * 60 - 0.38 * pen.vy * 30;
+
+      pen.vx += ax * 0.016;
+      pen.vy += ay * 0.016;
+      pen.x += pen.vx * 0.016;
+      pen.y += pen.vy * 0.016;
+
+      // 2. Mouse-Adaptive Pressure Calculation
+      // Moving slow = ink bleeds & pools (high pressure ~ 0.95)
+      // Flicking fast = line thins out into razor-sharp hairlines (low pressure ~ 0.12)
+      let targetP = 0;
+      if (pen.isDown) {
+        if (mouse.hardwarePressure > 0) {
+          targetP = mouse.hardwarePressure;
+        } else {
+          // Velocity dynamics
+          const speedFactor = Math.min(1.0, mouse.speed / (1200 / sensitivity));
+          targetP = (1.0 - speedFactor * 0.82) * wheelScale;
+          targetP = Math.max(0.12, Math.min(1.0, targetP));
+        }
+      }
+
+      // Pressure hysteresis damping (authentic XP-Pen rubber cushion feel)
+      pen.p += (pen.isDown ? 0.30 : 0.15) * (targetP - pen.p);
+
+      // 3. Render active stroke segment
+      if (pen.isDown && Math.hypot(dx, dy) > 0.2) {
+        currentStroke.push({
+          x: pen.x,
+          y: pen.y,
+          p: pen.p,
+          color: document.getElementById('ink-color').value
+        });
+        renderSegment(currentStroke);
+      }
+
+      // 4. Update HUD
+      const discreteLvl = Math.round(pen.p * 8191);
+      hudPressure.textContent = `${discreteLvl} / 8192`;
+      hudBar.style.width = `${Math.round(pen.p * 100)}%`;
+      hudSpeed.textContent = `${Math.round(mouse.speed)} px/s`;
+      hudWheel.textContent = `${wheelScale.toFixed(1)}x`;
+
+      requestAnimationFrame(physicsTick);
+    }
+    requestAnimationFrame(physicsTick);
+
+    // Draw segment with dynamic line width
+    function renderSegment(pts) {
+      if (pts.length < 2) return;
+      const p1 = pts[pts.length - 2];
+      const p2 = pts[pts.length - 1];
+      ctx.save();
+      ctx.strokeStyle = p2.color;
+      ctx.lineCap = 'round';
+      ctx.lineJoin = 'round';
+      ctx.lineWidth = Math.max(1.5, p2.p * 16.0);
+      ctx.beginPath();
+      ctx.moveTo(p1.x, p1.y);
+      ctx.lineTo(p2.x, p2.y);
+      ctx.stroke();
+      ctx.restore();
+    }
+
+    function redraw() {
+      ctx.clearRect(0, 0, cv.clientWidth, cv.clientHeight);
+      for (const stroke of strokes) {
+        for (let i = 1; i < stroke.length; i++) {
+          renderSegment(stroke.slice(0, i + 1));
+        }
+      }
+    }
+
+    // Pointer Events Listener (Supports mouse, stylus, and touch)
+    cv.addEventListener('pointerdown', (e) => {
+      e.preventDefault();
+      cv.setPointerCapture(e.pointerId);
+      hint.style.display = 'none';
+
+      const rect = cv.getBoundingClientRect();
+      const x = e.clientX - rect.left;
+      const y = e.clientY - rect.top;
+
+      mouse.x = pen.x = x;
+      mouse.y = pen.y = y;
+      mouse.lastX = x;
+      mouse.lastY = y;
+      mouse.lastTime = performance.now();
+      mouse.speed = 0;
+      mouse.hardwarePressure = (e.pointerType === 'pen' && e.pressure > 0) ? e.pressure : 0;
+
+      pen.isDown = true;
+      pen.p = 0.5 * wheelScale;
+      currentStroke = [{ x, y, p: pen.p, color: document.getElementById('ink-color').value }];
+    });
+
+    cv.addEventListener('pointermove', (e) => {
+      const rect = cv.getBoundingClientRect();
+      const x = e.clientX - rect.left;
+      const y = e.clientY - rect.top;
+      const now = performance.now();
+      const dt = Math.max(1, now - mouse.lastTime) / 1000;
+
+      const dist = Math.hypot(x - mouse.lastX, y - mouse.lastY);
+      mouse.speed = dist / dt;
+      mouse.x = x;
+      mouse.y = y;
+      mouse.lastX = x;
+      mouse.lastY = y;
+      mouse.lastTime = now;
+      mouse.hardwarePressure = (e.pointerType === 'pen' && e.pressure > 0) ? e.pressure : 0;
+    });
+
+    const finishStroke = () => {
+      if (pen.isDown && currentStroke.length > 1) {
+        strokes.push([...currentStroke]);
+      }
+      pen.isDown = false;
+      currentStroke = [];
+      mouse.speed = 0;
+    };
+    cv.addEventListener('pointerup', finishStroke);
+    cv.addEventListener('pointercancel', finishStroke);
+
+    // Scroll Wheel: Modulates pen pressure / stroke scale interactively!
+    cv.addEventListener('wheel', (e) => {
+      e.preventDefault();
+      const delta = e.deltaY > 0 ? -0.1 : 0.1;
+      wheelScale = Math.max(0.4, Math.min(2.5, wheelScale + delta));
+    }, { passive: false });
+
+    // Buttons
+    document.getElementById('btn-clear').addEventListener('click', () => {
+      strokes = [];
+      currentStroke = [];
+      redraw();
+      hint.style.display = 'block';
+    });
+
+    document.getElementById('btn-undo').addEventListener('click', () => {
+      if (strokes.length > 0) {
+        strokes.pop();
+        redraw();
+      }
+    });
+
+    // Autonomous Physics Orbit (Harmonograph Simulation)
+    document.getElementById('btn-orbit').addEventListener('click', () => {
+      hint.style.display = 'none';
+      if (orbitAnim) cancelAnimationFrame(orbitAnim);
+      const cx = cv.clientWidth / 2;
+      const cy = cv.clientHeight / 2;
+      let tick = 0;
+      currentStroke = [];
+      pen.isDown = true;
+
+      function stepOrbit() {
+        const t = tick * 0.038;
+        const decay = Math.exp(-0.0007 * tick);
+        mouse.x = cx + 220 * Math.sin(2.0 * t) * decay;
+        mouse.y = cy + 130 * Math.sin(3.0 * t + 1.57) * decay;
+        mouse.speed = 300 + 400 * Math.sin(t * 2);
+        tick++;
+
+        if (tick < 720) {
+          orbitAnim = requestAnimationFrame(stepOrbit);
+        } else {
+          finishStroke();
+        }
+      }
+      stepOrbit();
+    });
+
+    // SVG Export
+    document.getElementById('btn-export').addEventListener('click', () => {
+      if (strokes.length === 0) {
+        alert("Canvas is empty! Draw something first.");
+        return;
+      }
+      let svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${cv.clientWidth} ${cv.clientHeight}" width="${cv.clientWidth}" height="${cv.clientHeight}" style="background:#0e1014">\n`;
+      for (const stroke of strokes) {
+        for (let i = 1; i < stroke.length; i++) {
+          const p1 = stroke[i-1], p2 = stroke[i];
+          const w = Math.max(1.5, p2.p * 16.0);
+          svg += `  <line x1="${p1.x.toFixed(1)}" y1="${p1.y.toFixed(1)}" x2="${p2.x.toFixed(1)}" y2="${p2.y.toFixed(1)}" stroke="${p2.color}" stroke-width="${w.toFixed(1)}" stroke-linecap="round"/>\n`;
+        }
+      }
+      svg += `</svg>`;
+      const blob = new Blob([svg], { type: 'image/svg+xml' });
+      const a = document.createElement('a');
+      a.href = URL.createObjectURL(blob);
+      a.download = 'xppen_drawing.svg';
+      a.click();
+    });
+
+    // Keyboard Shortcuts (Ctrl+Z)
+    window.addEventListener('keydown', (e) => {
+      if ((e.ctrlKey || e.metaKey) && e.key === 'z') {
+        document.getElementById('btn-undo').click();
+      }
+    });
   </script>
 </body>
 </html>
