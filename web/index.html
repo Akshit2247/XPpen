@@ -1,0 +1,447 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>XPpen Studio — Insane Python Digital Stylus & Physics Pen Computing Suite</title>
+  <meta name="description" content="High-precision digital pen physics simulator, Philip J. Schneider Bezier curve fitting, 8192 pressure levels, vintage flex nib railroading, and AxiDraw G-code generator running real Python via WebAssembly.">
+  
+  <!-- Modern Typography -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;500;600&family=Outfit:wght@400;500;600;700;800&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+  
+  <!-- Stylesheet -->
+  <link rel="stylesheet" href="style.css">
+
+  <!-- Pyodide (Python 3.12 in WebAssembly) -->
+  <script src="https://cdn.jsdelivr.net/pyodide/v0.26.1/full/pyodide.js"></script>
+</head>
+<body class="theme-obsidian">
+  <!-- Audio context for paper scratching ASMR -->
+  <div id="app-root" class="app-layout">
+    
+    <!-- Top Header -->
+    <header class="app-header">
+      <div class="header-left">
+        <div class="logo-group">
+          <div class="logo-glyph">
+            <svg viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <path d="M6 26L18 4L26 16L14 28L6 26Z" stroke="url(#logoGrad)" stroke-width="2.5" stroke-linejoin="round"/>
+              <circle cx="10" cy="22" r="2.5" fill="#00f2fe"/>
+              <defs>
+                <linearGradient id="logoGrad" x1="6" y1="4" x2="26" y2="28" gradientUnits="userSpaceOnUse">
+                  <stop stop-color="#00f2fe"/>
+                  <stop offset="0.5" stop-color="#8b5cf6"/>
+                  <stop offset="1" stop-color="#ec4899"/>
+                </linearGradient>
+              </defs>
+            </svg>
+          </div>
+          <div class="logo-text">
+            <span class="logo-title">XP<span class="gradient-text">pen</span></span>
+            <span class="logo-badge">STUDIO PRO</span>
+          </div>
+        </div>
+
+        <div class="hardware-pill" id="hardware-pill" title="Hardware Stylus Status">
+          <span class="pulse-dot"></span>
+          <span id="hardware-status-text">DIGITIZER READY (8,192 LEVELS)</span>
+        </div>
+
+        <div class="pyodide-pill" id="pyodide-pill" title="WebAssembly Python Runtime">
+          <span class="py-icon">🐍</span>
+          <span id="pyodide-status-text">Loading Pyodide Python 3.12...</span>
+        </div>
+      </div>
+
+      <nav class="header-nav">
+        <button class="nav-tab active" id="tab-studio" data-view="studio">
+          <span class="tab-icon">🎨</span> Studio
+        </button>
+        <button class="nav-tab" id="tab-generative" data-view="generative">
+          <span class="tab-icon">🌀</span> Generative Lab
+        </button>
+        <button class="nav-tab" id="tab-python" data-view="python">
+          <span class="tab-icon">💻</span> Python REPL
+        </button>
+        <button class="nav-tab" id="tab-gcode" data-view="gcode">
+          <span class="tab-icon">🤖</span> Plotter &amp; G-Code
+        </button>
+      </nav>
+
+      <div class="header-actions">
+        <button class="btn-icon" id="btn-sound-toggle" title="Toggle Paper ASMR Audio">
+          <span id="sound-icon">🔊</span>
+        </button>
+        <button class="btn-secondary" id="btn-undo" title="Undo Stroke (Ctrl+Z)">
+          <span>↩</span> Undo
+        </button>
+        <button class="btn-secondary" id="btn-clear" title="Clear Canvas">
+          <span>🧹</span> Clear
+        </button>
+        <div class="export-dropdown-wrapper">
+          <button class="btn-primary" id="btn-export-menu">
+            <span>💾</span> Export
+          </button>
+          <div class="dropdown-menu" id="export-dropdown">
+            <button class="dropdown-item" id="export-svg">Export Smooth SVG</button>
+            <button class="dropdown-item" id="export-png">Export High-Res PNG</button>
+            <button class="dropdown-item" id="export-gcode-btn">Export AxiDraw G-Code</button>
+            <button class="dropdown-item" id="export-python-script">Export Python Replay Script</button>
+          </div>
+        </div>
+      </div>
+    </header>
+
+    <!-- Main Workspace -->
+    <main class="workspace-container">
+      
+      <!-- Left Toolbar: Tools & Colors -->
+      <aside class="left-toolbar">
+        <div class="tool-section-title">INSTRUMENT</div>
+        <div class="brush-selector">
+          <button class="brush-btn active" data-brush="xppen_stylus" id="brush-xppen">
+            <span class="brush-icon">🎯</span>
+            <div class="brush-meta">
+              <span class="brush-name">XP-Pen Stylus</span>
+              <span class="brush-desc">Spring-damper physics</span>
+            </div>
+          </button>
+          <button class="brush-btn" data-brush="flex_nib" id="brush-flex">
+            <span class="brush-icon">✒️</span>
+            <div class="brush-meta">
+              <span class="brush-name">Vintage Flex Nib</span>
+              <span class="brush-desc">Tine spread + railroading</span>
+            </div>
+          </button>
+          <button class="brush-btn" data-brush="broad_nib" id="brush-broad">
+            <span class="brush-icon">🖋️</span>
+            <div class="brush-meta">
+              <span class="brush-name">Gothic Chisel</span>
+              <span class="brush-desc">45° calligraphy ribbon</span>
+            </div>
+          </button>
+          <button class="brush-btn" data-brush="ballpoint" id="brush-ballpoint">
+            <span class="brush-icon">🖊️</span>
+            <div class="brush-meta">
+              <span class="brush-name">Viscous Ballpoint</span>
+              <span class="brush-desc">Stribeck micro-friction</span>
+            </div>
+          </button>
+        </div>
+
+        <div class="tool-divider"></div>
+
+        <div class="tool-section-title">INK COLOR</div>
+        <div class="color-palette" id="color-palette">
+          <button class="color-swatch active" style="--swatch-color: #00f2fe;" data-color="#00f2fe" title="Electric Cyan"></button>
+          <button class="color-swatch" style="--swatch-color: #8b5cf6;" data-color="#8b5cf6" title="Ultraviolet"></button>
+          <button class="color-swatch" style="--swatch-color: #ec4899;" data-color="#ec4899" title="Neon Magenta"></button>
+          <button class="color-swatch" style="--swatch-color: #10b981;" data-color="#10b981" title="Emerald Glow"></button>
+          <button class="color-swatch" style="--swatch-color: #f59e0b;" data-color="#f59e0b" title="Amber Gold"></button>
+          <button class="color-swatch" style="--swatch-color: #f8fafc;" data-color="#f8fafc" title="Pure White"></button>
+          <button class="color-swatch" style="--swatch-color: #1e293b;" data-color="#1e293b" title="Obsidian Ink"></button>
+          <label class="color-picker-label" title="Custom Hex">
+            <input type="color" id="custom-color-picker" value="#00f2fe">
+            <span class="picker-plus">+</span>
+          </label>
+        </div>
+
+        <div class="tool-divider"></div>
+
+        <div class="tool-section-title">NIB SIZE</div>
+        <div class="slider-row">
+          <input type="range" id="slider-nib-size" min="1" max="64" value="12" class="custom-range">
+          <span class="slider-val" id="val-nib-size">12px</span>
+        </div>
+
+        <div class="tool-divider"></div>
+
+        <div class="inkwell-action">
+          <button class="btn-inkwell" id="btn-dip-ink" title="Refill ink reservoir">
+            <span>💧</span> Dip In Inkwell
+          </button>
+          <div class="reservoir-meter">
+            <div class="reservoir-fill" id="reservoir-fill" style="width: 100%;"></div>
+          </div>
+          <span class="reservoir-label" id="reservoir-label">Ink Reservoir: 100%</span>
+        </div>
+      </aside>
+
+      <!-- Center Stage: High-DPI Canvas & Live HUD -->
+      <section class="canvas-stage" id="canvas-stage">
+        
+        <!-- Background grid overlay -->
+        <div class="grid-backdrop"></div>
+
+        <!-- Drawing Canvas -->
+        <canvas id="main-canvas"></canvas>
+
+        <!-- Dynamic Real-time HUD -->
+        <div class="live-telemetry-hud" id="telemetry-hud">
+          <div class="hud-card pressure-card">
+            <div class="hud-label">PRESSURE (8,192 LPI)</div>
+            <div class="pressure-gauge-container">
+              <svg class="pressure-gauge-svg" viewBox="0 0 80 80">
+                <circle cx="40" cy="40" r="32" class="gauge-bg"/>
+                <circle cx="40" cy="40" r="32" class="gauge-fill" id="gauge-pressure-fill" stroke-dasharray="201.06" stroke-dashoffset="201.06"/>
+              </svg>
+              <div class="pressure-number-box">
+                <span id="hud-pressure-val">0</span>
+                <span class="unit">lvls</span>
+              </div>
+            </div>
+          </div>
+
+          <div class="hud-card tilt-card">
+            <div class="hud-label">TILT VECTOR RADAR</div>
+            <div class="tilt-radar-display">
+              <div class="radar-crosshair"></div>
+              <div class="radar-puck" id="radar-puck"></div>
+            </div>
+            <div class="tilt-values">
+              <span id="hud-tilt-x">Tx: 0°</span>
+              <span id="hud-tilt-y">Ty: 0°</span>
+            </div>
+          </div>
+
+          <div class="hud-card stats-card">
+            <div class="hud-label">PHYSICS TELEMETRY</div>
+            <div class="stat-line"><span>Speed:</span> <strong id="hud-speed">0.0 px/ms</strong></div>
+            <div class="stat-line"><span>Drag Force:</span> <strong id="hud-drag">0.00 N</strong></div>
+            <div class="stat-line"><span>Segments:</span> <strong id="hud-bezier-count">0</strong></div>
+            <div class="stat-line"><span>Engine:</span> <strong class="badge-py" id="hud-engine-status">Python 3.12</strong></div>
+          </div>
+        </div>
+
+        <!-- Floating Quick Tip -->
+        <div class="canvas-hint" id="canvas-hint">
+          💡 <span>Draw with your XP-Pen stylus, Apple pencil, or mouse! Real 8,192 pressure &amp; tilt active.</span>
+        </div>
+      </section>
+
+      <!-- Right Panel: Physics, Math, & Humanizer Inspector -->
+      <aside class="right-inspector">
+        <div class="panel-header">
+          <h3>Physics &amp; Math Tuning</h3>
+          <span class="sub-badge">Schneider 1990</span>
+        </div>
+
+        <div class="inspector-scroll">
+          
+          <!-- Pressure Calibration Curve -->
+          <div class="control-group">
+            <label class="control-label">Hardware Pressure Curve</label>
+            <div class="curve-button-grid">
+              <button class="btn-curve" data-curve="linear">Linear</button>
+              <button class="btn-curve" data-curve="soft">Soft (γ 0.55)</button>
+              <button class="btn-curve" data-curve="firm">Firm (γ 1.8)</button>
+              <button class="btn-curve active" data-curve="s_curve">Sigmoid S-Curve</button>
+            </div>
+            <p class="control-hint">Sigmoid dampens accidental taps while unlocking lush full-pressure swells.</p>
+          </div>
+
+          <!-- Spring-Damper Physics -->
+          <div class="control-group">
+            <div class="slider-header">
+              <label>Nib Spring Stiffness (k)</label>
+              <span id="val-spring-k">0.45</span>
+            </div>
+            <input type="range" id="slider-spring-k" min="0.10" max="1.00" step="0.05" value="0.45" class="custom-range">
+          </div>
+
+          <div class="control-group">
+            <div class="slider-header">
+              <label>Nib Damping Ratio (c)</label>
+              <span id="val-damping-c">0.38</span>
+            </div>
+            <input type="range" id="slider-damping-c" min="0.05" max="0.95" step="0.05" value="0.38" class="custom-range">
+          </div>
+
+          <!-- Stribeck Paper Friction -->
+          <div class="control-group">
+            <div class="slider-header">
+              <label>Paper Fiber Friction (Stribeck)</label>
+              <span id="val-friction">0.15</span>
+            </div>
+            <input type="range" id="slider-friction" min="0.00" max="0.60" step="0.02" value="0.15" class="custom-range">
+          </div>
+
+          <!-- Philip Schneider Bezier Tolerance -->
+          <div class="control-group">
+            <div class="slider-header">
+              <label>Bézier Curve Fit Tolerance (ε)</label>
+              <span id="val-bezier-eps">3.0 px</span>
+            </div>
+            <input type="range" id="slider-bezier-eps" min="0.5" max="10.0" step="0.5" value="3.0" class="custom-range">
+            <p class="control-hint">Recursive least-squares error bound. Lower = faithful; Higher = buttery smooth.</p>
+          </div>
+
+          <div class="control-divider"></div>
+
+          <!-- Humanizer: Caffeine Hand Jitter -->
+          <div class="control-group highlight-group">
+            <div class="slider-header">
+              <label class="gradient-text-alt">☕ Hand Tremor &amp; Caffeine Mode</label>
+              <span id="val-caffeine">0.0</span>
+            </div>
+            <input type="range" id="slider-caffeine" min="0.0" max="1.0" step="0.05" value="0.0" class="custom-range caffeine-range">
+            <p class="control-hint">Simulates 10Hz physiological hand micro-tremor and 2AM caffeine shakes.</p>
+          </div>
+
+          <div class="control-divider"></div>
+
+          <!-- Developer Log Stream -->
+          <div class="control-group">
+            <label class="control-label">Live Python Terminal Log</label>
+            <div class="mini-terminal" id="mini-terminal">
+              <div class="log-line text-cyan">[INIT] StylusPhysicsSimulator active</div>
+              <div class="log-line text-purple">[MATH] Philip J. Schneider curve fitter bound</div>
+              <div class="log-line text-muted">[DEV] Bro don't touch the epsilon value it's calibrated</div>
+            </div>
+          </div>
+
+        </div>
+      </aside>
+
+    </main>
+
+    <!-- Modal 1: Generative Physics Lab -->
+    <div class="modal-overlay hidden" id="modal-generative">
+      <div class="modal-card">
+        <div class="modal-header">
+          <div class="modal-title-group">
+            <span class="modal-icon">🌀</span>
+            <h2>Generative Pen Physics Lab</h2>
+          </div>
+          <button class="btn-close-modal" id="close-modal-generative">×</button>
+        </div>
+        <div class="modal-body">
+          <p class="modal-subtitle">Generate pure mathematical pen paths calculated in real-time by Python:</p>
+          
+          <div class="generative-cards-grid">
+            <div class="gen-card" data-gen="spiro">
+              <div class="gen-badge">Epicycloid Gears</div>
+              <h3>Spirograph Pen</h3>
+              <p>Simulates rolling brass gears with friction backlash and variable centrifugal nib pressure.</p>
+              <button class="btn-primary btn-run-gen" data-gen="spiro">Generate Spirograph</button>
+            </div>
+
+            <div class="gen-card" data-gen="lorenz">
+              <div class="gen-badge">Chaos Theory (RK4)</div>
+              <h3>Lorenz Attractor</h3>
+              <p>Edward Lorenz's strange attractor integrated with 4th-order Runge-Kutta. Depth maps to ink pressure.</p>
+              <button class="btn-primary btn-run-gen" data-gen="lorenz">Generate Lorenz Chaos</button>
+            </div>
+
+            <div class="gen-card" data-gen="harmonograph">
+              <div class="gen-badge">3 Pendulums</div>
+              <h3>Harmonograph Pen</h3>
+              <p>Victorian 3-pendulum mechanical drawing apparatus with exponential friction dampening.</p>
+              <button class="btn-primary btn-run-gen" data-gen="harmonograph">Generate Harmonograph</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Modal 2: In-Browser Python REPL / Code Sandbox -->
+    <div class="modal-overlay hidden" id="modal-python">
+      <div class="modal-card wide-card">
+        <div class="modal-header">
+          <div class="modal-title-group">
+            <span class="modal-icon">💻</span>
+            <h2>In-Browser Python 3.12 Engine (Pyodide WebAssembly)</h2>
+          </div>
+          <button class="btn-close-modal" id="close-modal-python">×</button>
+        </div>
+        <div class="modal-body">
+          <p class="modal-subtitle">You can literally write Python here and run it live against the canvas:</p>
+          
+          <div class="code-editor-wrapper">
+            <textarea id="python-code-input" spellcheck="false" class="code-textarea"># XPpen In-Browser Python Studio Script
+import math
+
+print("Bro, running custom Python math directly on the canvas!")
+
+# Generate a custom Fibonacci golden spiral with pressure modulation
+cx, cy = 450, 350
+spiral_points = []
+for i in range(1200):
+    theta = i * 0.05
+    r = 2.2 * math.sqrt(i) * 5.0
+    x = cx + r * math.cos(theta)
+    y = cy + r * math.sin(theta)
+    p = 0.3 + 0.6 * math.sin(theta * 2.0)
+    spiral_points.append({"x": round(x, 2), "y": round(y, 2), "pressure": max(0.1, round(p, 3))})
+
+# Send points directly to canvas renderer
+render_stroke_on_canvas(spiral_points, "#00f2fe", 4.0)
+print(f"Generated {len(spiral_points)} Fibonacci spiral points in Python!")
+</textarea>
+          </div>
+
+          <div class="editor-actions">
+            <button class="btn-primary" id="btn-run-python-code">
+              <span>▶</span> Run Python in WebAssembly
+            </button>
+            <button class="btn-secondary" id="btn-reset-python-code">Reset Script</button>
+            <span class="editor-output-status" id="python-run-output">Ready.</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Modal 3: G-Code Plotter & 2-Opt TSP Inspector -->
+    <div class="modal-overlay hidden" id="modal-gcode">
+      <div class="modal-card wide-card">
+        <div class="modal-header">
+          <div class="modal-title-group">
+            <span class="modal-icon">🤖</span>
+            <h2>AxiDraw &amp; CNC Pen Plotter G-Code Engine</h2>
+          </div>
+          <button class="btn-close-modal" id="close-modal-gcode">×</button>
+        </div>
+        <div class="modal-body">
+          <div class="gcode-layout">
+            <div class="gcode-visualizer-box">
+              <div class="gcode-vis-header">
+                <span>Vector Stroke &amp; Air-Travel Preview</span>
+                <span class="tag-opt">TSP 2-Opt Optimized</span>
+              </div>
+              <canvas id="gcode-preview-canvas" width="480" height="320"></canvas>
+              <div class="gcode-legend">
+                <span class="legend-item"><span class="dot-draw"></span> Pen DOWN (Draw)</span>
+                <span class="legend-item"><span class="dot-travel"></span> Pen UP (Rapid Air Travel)</span>
+              </div>
+            </div>
+
+            <div class="gcode-text-box">
+              <div class="gcode-stats-grid">
+                <div class="gcode-stat">
+                  <span>Total Strokes</span>
+                  <strong id="gcode-stat-strokes">0</strong>
+                </div>
+                <div class="gcode-stat">
+                  <span>Air-Travel Saved</span>
+                  <strong class="text-green" id="gcode-stat-saved">~48%</strong>
+                </div>
+              </div>
+              <textarea id="gcode-output-area" readonly spellcheck="false" class="gcode-textarea">; Generating 2-Opt G-code...</textarea>
+              <div class="gcode-actions">
+                <button class="btn-primary" id="btn-download-gcode-file">Download .GCODE File</button>
+                <button class="btn-secondary" id="btn-copy-gcode">Copy to Clipboard</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- Main JavaScript Controller -->
+  <script src="app.js"></script>
+</body>
+</html>
