@@ -293,13 +293,14 @@
     cv.addEventListener('pointerup', stop);
     cv.addEventListener('pointercancel', stop);
 
-    // Scroll Wheel: Modulates pen pressure and line weight with visual explanation toast!
     cv.addEventListener('wheel', e => {
       e.preventDefault();
-      const delta = e.deltaY > 0 ? -0.1 : 0.1;
-      wheelScale = Math.max(0.4, Math.min(2.5, wheelScale + delta));
+      const isIncreasing = e.deltaY < 0;
+      const delta = isIncreasing ? 0.1 : -0.1;
+      wheelScale = Math.max(0.4, Math.min(2.5, +(wheelScale + delta).toFixed(1)));
       
-      toast.textContent = `🖱️ Wheel Dial: ${wheelScale.toFixed(1)}x Line Weight (${delta > 0 ? 'Thinner' : 'Thicker'})`;
+      const label = isIncreasing ? 'Thicker' : 'Thinner';
+      toast.textContent = `🖱️ Wheel Dial: ${wheelScale.toFixed(1)}x Line Weight (${label})`;
       toast.classList.add('show');
       clearTimeout(toastTimer);
       toastTimer = setTimeout(() => toast.classList.remove('show'), 1200);
