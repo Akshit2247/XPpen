@@ -3,445 +3,514 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>XPpen Studio — Insane Python Digital Stylus & Physics Pen Computing Suite</title>
-  <meta name="description" content="High-precision digital pen physics simulator, Philip J. Schneider Bezier curve fitting, 8192 pressure levels, vintage flex nib railroading, and AxiDraw G-code generator running real Python via WebAssembly.">
+  <title>XPPen Pentablet Driver v3.4.8 (Official Pro Suite)</title>
+  <meta name="description" content="Realistic replica of the official XPPen Pentablet Driver software with real stylus pressure calibration, work area mapping, express keys, and Python physics pen computing.">
   
-  <!-- Modern Typography -->
+  <!-- System & Desktop Typography -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;500;600&family=Outfit:wght@400;500;600;700;800&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Segoe+UI:wght@400;600;700&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
   
-  <!-- Stylesheet -->
   <link rel="stylesheet" href="style.css">
 
-  <!-- Pyodide (Python 3.12 in WebAssembly) -->
+  <!-- Pyodide (Python 3.12 WebAssembly) -->
   <script src="https://cdn.jsdelivr.net/pyodide/v0.26.1/full/pyodide.js"></script>
 </head>
-<body class="theme-obsidian">
-  <!-- Audio context for paper scratching ASMR -->
-  <div id="app-root" class="app-layout">
+<body class="desktop-os-window">
+
+  <!-- Main Driver Window Container (Authentic XPPen Pentablet Driver GUI) -->
+  <div class="xppen-driver-window" id="driver-app">
     
-    <!-- Top Header -->
-    <header class="app-header">
-      <div class="header-left">
-        <div class="logo-group">
-          <div class="logo-glyph">
-            <svg viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
-              <path d="M6 26L18 4L26 16L14 28L6 26Z" stroke="url(#logoGrad)" stroke-width="2.5" stroke-linejoin="round"/>
-              <circle cx="10" cy="22" r="2.5" fill="#00f2fe"/>
-              <defs>
-                <linearGradient id="logoGrad" x1="6" y1="4" x2="26" y2="28" gradientUnits="userSpaceOnUse">
-                  <stop stop-color="#00f2fe"/>
-                  <stop offset="0.5" stop-color="#8b5cf6"/>
-                  <stop offset="1" stop-color="#ec4899"/>
-                </linearGradient>
-              </defs>
-            </svg>
-          </div>
-          <div class="logo-text">
-            <span class="logo-title">XP<span class="gradient-text">pen</span></span>
-            <span class="logo-badge">STUDIO PRO</span>
-          </div>
+    <!-- 1. Window Title Bar -->
+    <header class="driver-titlebar">
+      <div class="titlebar-left">
+        <div class="xppen-brand-mark">
+          <span class="brand-x">XP</span><span class="brand-pen">·PEN</span>
+          <span class="brand-sub">Pentablet Driver</span>
         </div>
-
-        <div class="hardware-pill" id="hardware-pill" title="Hardware Stylus Status">
-          <span class="pulse-dot"></span>
-          <span id="hardware-status-text">DIGITIZER READY (8,192 LEVELS)</span>
-        </div>
-
-        <div class="pyodide-pill" id="pyodide-pill" title="WebAssembly Python Runtime">
-          <span class="py-icon">🐍</span>
-          <span id="pyodide-status-text">Loading Pyodide Python 3.12...</span>
+        <div class="device-status-badge">
+          <span class="status-indicator-dot online"></span>
+          <span class="device-name" id="current-device-name">Artist Pro 16 (Gen 2) — 16,384 Levels</span>
         </div>
       </div>
 
-      <nav class="header-nav">
-        <button class="nav-tab active" id="tab-studio" data-view="studio">
-          <span class="tab-icon">🎨</span> Studio
-        </button>
-        <button class="nav-tab" id="tab-generative" data-view="generative">
-          <span class="tab-icon">🌀</span> Generative Lab
-        </button>
-        <button class="nav-tab" id="tab-python" data-view="python">
-          <span class="tab-icon">💻</span> Python REPL
-        </button>
-        <button class="nav-tab" id="tab-gcode" data-view="gcode">
-          <span class="tab-icon">🤖</span> Plotter &amp; G-Code
-        </button>
-      </nav>
+      <div class="titlebar-center">
+        <!-- App Profile Selector -->
+        <div class="profile-selector-group">
+          <label for="app-profile-select">Application:</label>
+          <select id="app-profile-select" class="driver-dropdown">
+            <option value="all">All Applications (Default)</option>
+            <option value="photoshop">Adobe Photoshop.exe</option>
+            <option value="clipstudio">CLIP STUDIO PAINT.exe</option>
+            <option value="blender">Blender.exe</option>
+            <option value="krita">Krita.exe</option>
+            <option value="illustrator">Adobe Illustrator.exe</option>
+          </select>
+          <button class="btn-profile-add" title="Add Application Profile">+</button>
+        </div>
+      </div>
 
-      <div class="header-actions">
-        <button class="btn-icon" id="btn-sound-toggle" title="Toggle Paper ASMR Audio">
-          <span id="sound-icon">🔊</span>
-        </button>
-        <button class="btn-secondary" id="btn-undo" title="Undo Stroke (Ctrl+Z)">
-          <span>↩</span> Undo
-        </button>
-        <button class="btn-secondary" id="btn-clear" title="Clear Canvas">
-          <span>🧹</span> Clear
-        </button>
-        <div class="export-dropdown-wrapper">
-          <button class="btn-primary" id="btn-export-menu">
-            <span>💾</span> Export
-          </button>
-          <div class="dropdown-menu" id="export-dropdown">
-            <button class="dropdown-item" id="export-svg">Export Smooth SVG</button>
-            <button class="dropdown-item" id="export-png">Export High-Res PNG</button>
-            <button class="dropdown-item" id="export-gcode-btn">Export AxiDraw G-Code</button>
-            <button class="dropdown-item" id="export-python-script">Export Python Replay Script</button>
-          </div>
+      <div class="titlebar-right">
+        <!-- Python Engine status pill -->
+        <div class="engine-badge" id="pyodide-engine-badge" title="WebAssembly Python 3.12 Status">
+          <span class="engine-icon">🐍</span>
+          <span id="engine-status-text">Python 3.12 Core</span>
+        </div>
+        <div class="window-control-buttons">
+          <button class="win-btn win-min" title="Minimize">─</button>
+          <button class="win-btn win-max" title="Maximize">□</button>
+          <button class="win-btn win-close" title="Close">✕</button>
         </div>
       </div>
     </header>
 
-    <!-- Main Workspace -->
-    <main class="workspace-container">
-      
-      <!-- Left Toolbar: Tools & Colors -->
-      <aside class="left-toolbar">
-        <div class="tool-section-title">INSTRUMENT</div>
-        <div class="brush-selector">
-          <button class="brush-btn active" data-brush="xppen_stylus" id="brush-xppen">
-            <span class="brush-icon">🎯</span>
-            <div class="brush-meta">
-              <span class="brush-name">XP-Pen Stylus</span>
-              <span class="brush-desc">Spring-damper physics</span>
+    <!-- 2. Primary Navigation Tabs (Authentic XPPen Layout) -->
+    <nav class="driver-nav-bar">
+      <button class="nav-tab-item active" data-tab="pen-settings">
+        <span class="nav-icon">✏️</span> Pen Settings
+      </button>
+      <button class="nav-tab-item" data-tab="work-area">
+        <span class="nav-icon">🖥️</span> Work Area
+      </button>
+      <button class="nav-tab-item" data-tab="shortcut-keys">
+        <span class="nav-icon">⌨️</span> Express Keys &amp; Roller
+      </button>
+      <button class="nav-tab-item" data-tab="pen-display">
+        <span class="nav-icon">🎨</span> Pen Display Studio
+      </button>
+      <button class="nav-tab-item" data-tab="diagnostics">
+        <span class="nav-icon">⚙️</span> Diagnostics &amp; G-Code
+      </button>
+    </nav>
+
+    <!-- 3. Driver Content Area -->
+    <main class="driver-content-container">
+
+      <!-- ================= TAB 1: PEN SETTINGS ================= -->
+      <section class="driver-page active" id="page-pen-settings">
+        <div class="pen-settings-grid">
+          
+          <!-- Left Column: Stylus Diagram & Button Assignments -->
+          <div class="driver-card stylus-diagram-card">
+            <div class="card-header">
+              <h3>Stylus Configuration</h3>
+              <span class="stylus-model">X3 Pro Smart Chip Stylus</span>
             </div>
-          </button>
-          <button class="brush-btn" data-brush="flex_nib" id="brush-flex">
-            <span class="brush-icon">✒️</span>
-            <div class="brush-meta">
-              <span class="brush-name">Vintage Flex Nib</span>
-              <span class="brush-desc">Tine spread + railroading</span>
-            </div>
-          </button>
-          <button class="brush-btn" data-brush="broad_nib" id="brush-broad">
-            <span class="brush-icon">🖋️</span>
-            <div class="brush-meta">
-              <span class="brush-name">Gothic Chisel</span>
-              <span class="brush-desc">45° calligraphy ribbon</span>
-            </div>
-          </button>
-          <button class="brush-btn" data-brush="ballpoint" id="brush-ballpoint">
-            <span class="brush-icon">🖊️</span>
-            <div class="brush-meta">
-              <span class="brush-name">Viscous Ballpoint</span>
-              <span class="brush-desc">Stribeck micro-friction</span>
-            </div>
-          </button>
-        </div>
 
-        <div class="tool-divider"></div>
-
-        <div class="tool-section-title">INK COLOR</div>
-        <div class="color-palette" id="color-palette">
-          <button class="color-swatch active" style="--swatch-color: #00f2fe;" data-color="#00f2fe" title="Electric Cyan"></button>
-          <button class="color-swatch" style="--swatch-color: #8b5cf6;" data-color="#8b5cf6" title="Ultraviolet"></button>
-          <button class="color-swatch" style="--swatch-color: #ec4899;" data-color="#ec4899" title="Neon Magenta"></button>
-          <button class="color-swatch" style="--swatch-color: #10b981;" data-color="#10b981" title="Emerald Glow"></button>
-          <button class="color-swatch" style="--swatch-color: #f59e0b;" data-color="#f59e0b" title="Amber Gold"></button>
-          <button class="color-swatch" style="--swatch-color: #f8fafc;" data-color="#f8fafc" title="Pure White"></button>
-          <button class="color-swatch" style="--swatch-color: #1e293b;" data-color="#1e293b" title="Obsidian Ink"></button>
-          <label class="color-picker-label" title="Custom Hex">
-            <input type="color" id="custom-color-picker" value="#00f2fe">
-            <span class="picker-plus">+</span>
-          </label>
-        </div>
-
-        <div class="tool-divider"></div>
-
-        <div class="tool-section-title">NIB SIZE</div>
-        <div class="slider-row">
-          <input type="range" id="slider-nib-size" min="1" max="64" value="12" class="custom-range">
-          <span class="slider-val" id="val-nib-size">12px</span>
-        </div>
-
-        <div class="tool-divider"></div>
-
-        <div class="inkwell-action">
-          <button class="btn-inkwell" id="btn-dip-ink" title="Refill ink reservoir">
-            <span>💧</span> Dip In Inkwell
-          </button>
-          <div class="reservoir-meter">
-            <div class="reservoir-fill" id="reservoir-fill" style="width: 100%;"></div>
-          </div>
-          <span class="reservoir-label" id="reservoir-label">Ink Reservoir: 100%</span>
-        </div>
-      </aside>
-
-      <!-- Center Stage: High-DPI Canvas & Live HUD -->
-      <section class="canvas-stage" id="canvas-stage">
-        
-        <!-- Background grid overlay -->
-        <div class="grid-backdrop"></div>
-
-        <!-- Drawing Canvas -->
-        <canvas id="main-canvas"></canvas>
-
-        <!-- Dynamic Real-time HUD -->
-        <div class="live-telemetry-hud" id="telemetry-hud">
-          <div class="hud-card pressure-card">
-            <div class="hud-label">PRESSURE (8,192 LPI)</div>
-            <div class="pressure-gauge-container">
-              <svg class="pressure-gauge-svg" viewBox="0 0 80 80">
-                <circle cx="40" cy="40" r="32" class="gauge-bg"/>
-                <circle cx="40" cy="40" r="32" class="gauge-fill" id="gauge-pressure-fill" stroke-dasharray="201.06" stroke-dashoffset="201.06"/>
+            <div class="stylus-illustration-wrapper">
+              <svg class="stylus-svg-diagram" viewBox="0 0 340 100" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <!-- Pen Body -->
+                <path d="M40 50 L80 44 L310 44 C315 44 320 46 320 50 C320 54 315 56 310 56 L80 56 Z" fill="#24262c" stroke="#3d404a" stroke-width="2"/>
+                <!-- Grip Section -->
+                <path d="M40 50 L80 44 L160 44 L160 56 L80 56 Z" fill="#1b1c21" stroke="#333640" stroke-width="1.5"/>
+                <!-- Nib Cone -->
+                <polygon points="40,50 15,48 10,50 15,52" fill="#e50012"/>
+                <!-- Pen Tip Nib -->
+                <polygon points="10,50 2,49 2,51" fill="#f0f2f5"/>
+                <!-- Button 2 (Eraser / Switch) -->
+                <rect x="100" y="41" width="24" height="4" rx="1.5" fill="#e50012" stroke="#ff3344" stroke-width="0.8"/>
+                <!-- Button 1 (Right Click) -->
+                <rect x="128" y="41" width="24" height="4" rx="1.5" fill="#383c47" stroke="#4f5462" stroke-width="0.8"/>
+                <!-- Indicator lines -->
+                <line x1="112" y1="41" x2="112" y2="18" stroke="#8c92a4" stroke-width="1" stroke-dasharray="2 2"/>
+                <line x1="140" y1="41" x2="140" y2="18" stroke="#8c92a4" stroke-width="1" stroke-dasharray="2 2"/>
               </svg>
-              <div class="pressure-number-box">
-                <span id="hud-pressure-val">0</span>
-                <span class="unit">lvls</span>
+
+              <!-- Stylus Button Mapping Dropdowns -->
+              <div class="stylus-button-bindings">
+                <div class="binding-row">
+                  <span class="binding-label"><span class="badge-red">B2</span> Upper Button:</span>
+                  <select class="driver-dropdown binding-dropdown" id="btn2-action">
+                    <option value="eraser">Pen / Eraser Toggle</option>
+                    <option value="right-click">Right Click</option>
+                    <option value="undo">Undo (Ctrl+Z)</option>
+                    <option value="middle-click">Middle Click</option>
+                  </select>
+                </div>
+                <div class="binding-row">
+                  <span class="binding-label"><span class="badge-grey">B1</span> Lower Button:</span>
+                  <select class="driver-dropdown binding-dropdown" id="btn1-action">
+                    <option value="right-click">Right Click</option>
+                    <option value="eraser">Pen / Eraser Toggle</option>
+                    <option value="space">Hand Tool (Space)</option>
+                    <option value="alt">Color Picker (Alt)</option>
+                  </select>
+                </div>
               </div>
             </div>
-          </div>
 
-          <div class="hud-card tilt-card">
-            <div class="hud-label">TILT VECTOR RADAR</div>
-            <div class="tilt-radar-display">
-              <div class="radar-crosshair"></div>
-              <div class="radar-puck" id="radar-puck"></div>
+            <!-- Windows Ink & Mouse Mode check boxes -->
+            <div class="driver-checkbox-group">
+              <label class="driver-checkbox">
+                <input type="checkbox" id="chk-windows-ink" checked>
+                <span class="checkmark"></span>
+                <span>Windows Ink (Enable High-Resolution Pressure API)</span>
+              </label>
+              <label class="driver-checkbox">
+                <input type="checkbox" id="chk-mouse-mode">
+                <span class="checkmark"></span>
+                <span>Mouse Mode (Relative Cursor Tracking)</span>
+              </label>
             </div>
-            <div class="tilt-values">
-              <span id="hud-tilt-x">Tx: 0°</span>
-              <span id="hud-tilt-y">Ty: 0°</span>
+          </div>
+
+          <!-- Right Column: Pressure Sensitivity Curve & Test Scratchpad -->
+          <div class="driver-card pressure-calibration-card">
+            <div class="card-header">
+              <h3>Output Pressure Curve &amp; Sensitivity</h3>
+              <div class="curve-presets">
+                <button class="btn-preset active" data-curve="s_curve">Default (S-Curve)</button>
+                <button class="btn-preset" data-curve="soft">Soft</button>
+                <button class="btn-preset" data-curve="firm">Hard</button>
+                <button class="btn-preset" data-curve="linear">Linear</button>
+              </div>
             </div>
+
+            <div class="curve-and-feel-container">
+              <!-- Interactive 2D Bézier Pressure Curve Graph -->
+              <div class="pressure-curve-graph-box">
+                <canvas id="pressure-curve-canvas" width="220" height="220"></canvas>
+                <div class="curve-axis-label axis-y">Output Pressure</div>
+                <div class="curve-axis-label axis-x">Input Pressure</div>
+              </div>
+
+              <!-- Sensitivity Adjustment Slider -->
+              <div class="pressure-feel-slider-box">
+                <div class="slider-title-row">
+                  <span>Pressure Sensitivity Feel:</span>
+                  <strong id="feel-label">Normal (0)</strong>
+                </div>
+                <div class="slider-track-wrap">
+                  <span class="slider-end-label">Soft</span>
+                  <input type="range" id="slider-pressure-feel" min="-5" max="5" value="0" step="1" class="xppen-slider">
+                  <span class="slider-end-label">Hard</span>
+                </div>
+                <div class="feel-tick-marks">
+                  <span>-5</span><span>-4</span><span>-3</span><span>-2</span><span>-1</span><span>0</span><span>1</span><span>2</span><span>3</span><span>4</span><span>5</span>
+                </div>
+
+                <!-- Python Physics Constants -->
+                <div class="physics-fine-tuning">
+                  <div class="fine-tuning-row">
+                    <span>Nib Spring Stiffness (k):</span>
+                    <input type="range" id="fine-spring-k" min="0.1" max="1.0" step="0.05" value="0.45" class="xppen-slider-sm">
+                    <span id="lbl-fine-spring-k">0.45</span>
+                  </div>
+                  <div class="fine-tuning-row">
+                    <span>Stribeck Paper Friction:</span>
+                    <input type="range" id="fine-friction" min="0.0" max="0.5" step="0.02" value="0.15" class="xppen-slider-sm">
+                    <span id="lbl-fine-friction">0.15</span>
+                  </div>
+                  <div class="fine-tuning-row">
+                    <span>Hand Tremor (Caffeine):</span>
+                    <input type="range" id="fine-caffeine" min="0.0" max="1.0" step="0.05" value="0.0" class="xppen-slider-sm">
+                    <span id="lbl-fine-caffeine">0.00</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Real-time Pressure Test Area (The authentic driver scratchpad) -->
+            <div class="driver-pressure-test-section">
+              <div class="test-header">
+                <div class="pressure-meter-container">
+                  <span class="meter-label">Current Pressure:</span>
+                  <div class="pressure-bar-track">
+                    <div class="pressure-bar-fill" id="pressure-test-bar"></div>
+                  </div>
+                  <span class="meter-number" id="pressure-numeric-readout">0 / 16384</span>
+                </div>
+                <button class="btn-clear-test" id="btn-clear-test-pad">Clear</button>
+              </div>
+
+              <!-- Interactive Scratchpad Area -->
+              <div class="test-canvas-wrapper">
+                <canvas id="pressure-test-canvas"></canvas>
+                <div class="test-canvas-placeholder" id="test-canvas-hint">
+                  Please test your stylus pressure here with your pen or mouse
+                </div>
+              </div>
+            </div>
+
           </div>
 
-          <div class="hud-card stats-card">
-            <div class="hud-label">PHYSICS TELEMETRY</div>
-            <div class="stat-line"><span>Speed:</span> <strong id="hud-speed">0.0 px/ms</strong></div>
-            <div class="stat-line"><span>Drag Force:</span> <strong id="hud-drag">0.00 N</strong></div>
-            <div class="stat-line"><span>Segments:</span> <strong id="hud-bezier-count">0</strong></div>
-            <div class="stat-line"><span>Engine:</span> <strong class="badge-py" id="hud-engine-status">Python 3.12</strong></div>
-          </div>
-        </div>
-
-        <!-- Floating Quick Tip -->
-        <div class="canvas-hint" id="canvas-hint">
-          💡 <span>Draw with your XP-Pen stylus, Apple pencil, or mouse! Real 8,192 pressure &amp; tilt active.</span>
         </div>
       </section>
 
-      <!-- Right Panel: Physics, Math, & Humanizer Inspector -->
-      <aside class="right-inspector">
-        <div class="panel-header">
-          <h3>Physics &amp; Math Tuning</h3>
-          <span class="sub-badge">Schneider 1990</span>
-        </div>
-
-        <div class="inspector-scroll">
+      <!-- ================= TAB 2: WORK AREA ================= -->
+      <section class="driver-page" id="page-work-area">
+        <div class="work-area-layout">
           
-          <!-- Pressure Calibration Curve -->
-          <div class="control-group">
-            <label class="control-label">Hardware Pressure Curve</label>
-            <div class="curve-button-grid">
-              <button class="btn-curve" data-curve="linear">Linear</button>
-              <button class="btn-curve" data-curve="soft">Soft (γ 0.55)</button>
-              <button class="btn-curve" data-curve="firm">Firm (γ 1.8)</button>
-              <button class="btn-curve active" data-curve="s_curve">Sigmoid S-Curve</button>
+          <div class="driver-card screen-mapping-card">
+            <div class="card-header">
+              <h3>Monitor Mapping</h3>
+              <div class="monitor-select-buttons">
+                <button class="btn-monitor active" data-display="all">Full Monitor</button>
+                <button class="btn-monitor" data-display="display1">Display 1 (1920×1080)</button>
+                <button class="btn-monitor" data-display="portion">Customize Area</button>
+              </div>
             </div>
-            <p class="control-hint">Sigmoid dampens accidental taps while unlocking lush full-pressure swells.</p>
+
+            <!-- Virtual Screen Monitor Representation -->
+            <div class="virtual-monitor-stage">
+              <div class="monitor-frame" id="monitor-frame">
+                <div class="monitor-screen-active" id="screen-active-area">
+                  <span class="screen-tag">Display 1: 1920 × 1080 (16:9)</span>
+                  <div class="mapping-reticle" id="mapping-reticle"></div>
+                </div>
+              </div>
+            </div>
+
+            <div class="work-area-controls-row">
+              <div class="control-col">
+                <label>Screen Ratio:</label>
+                <select class="driver-dropdown" id="sel-screen-ratio">
+                  <option value="16:9">Lock Proportion (16:9)</option>
+                  <option value="16:10">16:10 Ratio</option>
+                  <option value="full">Full Screen Stretch</option>
+                </select>
+              </div>
+
+              <div class="control-col">
+                <label>Active Tablet Area:</label>
+                <div class="coord-inputs">
+                  <span>X: <input type="number" value="0" class="input-coord" readonly></span>
+                  <span>Y: <input type="number" value="0" class="input-coord" readonly></span>
+                  <span>W: <input type="number" value="254" class="input-coord" readonly> mm</span>
+                  <span>H: <input type="number" value="158" class="input-coord" readonly> mm</span>
+                </div>
+              </div>
+
+              <div class="control-col">
+                <label>Orientation / Handedness:</label>
+                <div class="orientation-radios">
+                  <label><input type="radio" name="orient" value="0" checked> 0° (Landscape)</label>
+                  <label><input type="radio" name="orient" value="180"> 180° (Left Hand Mode)</label>
+                  <label><input type="radio" name="orient" value="90"> 90° (Portrait)</label>
+                </div>
+              </div>
+            </div>
+
           </div>
 
-          <!-- Spring-Damper Physics -->
-          <div class="control-group">
-            <div class="slider-header">
-              <label>Nib Spring Stiffness (k)</label>
-              <span id="val-spring-k">0.45</span>
+        </div>
+      </section>
+
+      <!-- ================= TAB 3: SHORTCUT KEYS ================= -->
+      <section class="driver-page" id="page-shortcut-keys">
+        <div class="shortcuts-layout">
+          <div class="driver-card shortcuts-card">
+            <div class="card-header">
+              <h3>Tablet Express Keys &amp; Mechanical Roller</h3>
+              <span class="shortcut-tip">Click any key label to remap hotkeys</span>
             </div>
-            <input type="range" id="slider-spring-k" min="0.10" max="1.00" step="0.05" value="0.45" class="custom-range">
+
+            <div class="tablet-hardware-visual">
+              <!-- Physical Tablet Chassis -->
+              <div class="tablet-chassis">
+                
+                <!-- Left Key Column K1-K4 -->
+                <div class="key-column">
+                  <div class="key-slot" data-key="K1">
+                    <span class="key-name">K1</span>
+                    <button class="key-binding-tag" id="label-k1">Undo [Ctrl+Z]</button>
+                  </div>
+                  <div class="key-slot" data-key="K2">
+                    <span class="key-name">K2</span>
+                    <button class="key-binding-tag" id="label-k2">Redo [Ctrl+Y]</button>
+                  </div>
+                  <div class="key-slot" data-key="K3">
+                    <span class="key-name">K3</span>
+                    <button class="key-binding-tag" id="label-k3">Brush [B]</button>
+                  </div>
+                  <div class="key-slot" data-key="K4">
+                    <span class="key-name">K4</span>
+                    <button class="key-binding-tag" id="label-k4">Eraser [E]</button>
+                  </div>
+                </div>
+
+                <!-- Center Red Dial / Roller Wheel -->
+                <div class="roller-wheel-housing">
+                  <div class="roller-wheel" id="hardware-roller-wheel">
+                    <div class="roller-core">
+                      <span class="roller-mode-indicator" id="roller-mode-label">Zoom</span>
+                    </div>
+                  </div>
+                  <span class="roller-caption">Red Dial (Turn Wheel)</span>
+                </div>
+
+                <!-- Right Key Column K5-K8 -->
+                <div class="key-column">
+                  <div class="key-slot" data-key="K5">
+                    <span class="key-name">K5</span>
+                    <button class="key-binding-tag" id="label-k5">Hand [Space]</button>
+                  </div>
+                  <div class="key-slot" data-key="K6">
+                    <span class="key-name">K6</span>
+                    <button class="key-binding-tag" id="label-k6">Zoom In [Ctrl+]</button>
+                  </div>
+                  <div class="key-slot" data-key="K7">
+                    <span class="key-name">K7</span>
+                    <button class="key-binding-tag" id="label-k7">Zoom Out [Ctrl-]</button>
+                  </div>
+                  <div class="key-slot" data-key="K8">
+                    <span class="key-name">K8</span>
+                    <button class="key-binding-tag" id="label-k8">Save [Ctrl+S]</button>
+                  </div>
+                </div>
+
+                <!-- Drawing Active Area Sheet -->
+                <div class="tablet-surface-plate">
+                  <div class="corner-bracket top-left"></div>
+                  <div class="corner-bracket top-right"></div>
+                  <div class="corner-bracket bottom-left"></div>
+                  <div class="corner-bracket bottom-right"></div>
+                  <div class="plate-text">XPPEN 10" × 6.25" ACTIVE WORK AREA</div>
+                </div>
+
+              </div>
+            </div>
+
+            <div class="shortcut-options-footer">
+              <label class="driver-checkbox">
+                <input type="checkbox" id="chk-disable-prompts">
+                <span class="checkmark"></span>
+                <span>Disable Express Key OSD Pop-up Prompts</span>
+              </label>
+              <button class="btn-driver-secondary" id="btn-reset-shortcuts">Reset to Default</button>
+            </div>
+
+          </div>
+        </div>
+      </section>
+
+      <!-- ================= TAB 4: PEN DISPLAY STUDIO ================= -->
+      <section class="driver-page" id="page-pen-display">
+        <div class="display-studio-layout">
+          
+          <!-- Studio Top Toolbar -->
+          <div class="studio-topbar">
+            <div class="studio-tools-left">
+              <div class="tool-segmented">
+                <button class="tool-btn active" data-brush="stylus" title="XP-Pen Stylus">🎯 Stylus</button>
+                <button class="tool-btn" data-brush="flex" title="Vintage Flex Nib">✒️ Flex Nib</button>
+                <button class="tool-btn" data-brush="gothic" title="Gothic Chisel Calligraphy">🖋️ Gothic Chisel</button>
+                <button class="tool-btn" data-brush="ballpoint" title="Ballpoint Friction">🖊️ Ballpoint</button>
+              </div>
+
+              <div class="tool-divider-vert"></div>
+
+              <div class="color-picker-chip">
+                <label>Ink:</label>
+                <input type="color" id="studio-color-picker" value="#f0f2f5">
+              </div>
+
+              <div class="size-stepper">
+                <label>Size:</label>
+                <input type="range" id="studio-nib-size" min="2" max="60" value="12" class="xppen-slider-sm">
+                <span id="studio-nib-size-val">12px</span>
+              </div>
+            </div>
+
+            <div class="studio-tools-right">
+              <button class="btn-studio-action" id="btn-studio-undo">↩ Undo</button>
+              <button class="btn-studio-action" id="btn-studio-clear">🧹 Clear</button>
+              <button class="btn-studio-action" id="btn-studio-export-svg">💾 Export SVG</button>
+              <button class="btn-studio-action btn-red" id="btn-studio-export-gcode">🤖 G-Code Plot</button>
+            </div>
           </div>
 
-          <div class="control-group">
-            <div class="slider-header">
-              <label>Nib Damping Ratio (c)</label>
-              <span id="val-damping-c">0.38</span>
-            </div>
-            <input type="range" id="slider-damping-c" min="0.05" max="0.95" step="0.05" value="0.38" class="custom-range">
-          </div>
-
-          <!-- Stribeck Paper Friction -->
-          <div class="control-group">
-            <div class="slider-header">
-              <label>Paper Fiber Friction (Stribeck)</label>
-              <span id="val-friction">0.15</span>
-            </div>
-            <input type="range" id="slider-friction" min="0.00" max="0.60" step="0.02" value="0.15" class="custom-range">
-          </div>
-
-          <!-- Philip Schneider Bezier Tolerance -->
-          <div class="control-group">
-            <div class="slider-header">
-              <label>Bézier Curve Fit Tolerance (ε)</label>
-              <span id="val-bezier-eps">3.0 px</span>
-            </div>
-            <input type="range" id="slider-bezier-eps" min="0.5" max="10.0" step="0.5" value="3.0" class="custom-range">
-            <p class="control-hint">Recursive least-squares error bound. Lower = faithful; Higher = buttery smooth.</p>
-          </div>
-
-          <div class="control-divider"></div>
-
-          <!-- Humanizer: Caffeine Hand Jitter -->
-          <div class="control-group highlight-group">
-            <div class="slider-header">
-              <label class="gradient-text-alt">☕ Hand Tremor &amp; Caffeine Mode</label>
-              <span id="val-caffeine">0.0</span>
-            </div>
-            <input type="range" id="slider-caffeine" min="0.0" max="1.0" step="0.05" value="0.0" class="custom-range caffeine-range">
-            <p class="control-hint">Simulates 10Hz physiological hand micro-tremor and 2AM caffeine shakes.</p>
-          </div>
-
-          <div class="control-divider"></div>
-
-          <!-- Developer Log Stream -->
-          <div class="control-group">
-            <label class="control-label">Live Python Terminal Log</label>
-            <div class="mini-terminal" id="mini-terminal">
-              <div class="log-line text-cyan">[INIT] StylusPhysicsSimulator active</div>
-              <div class="log-line text-purple">[MATH] Philip J. Schneider curve fitter bound</div>
-              <div class="log-line text-muted">[DEV] Bro don't touch the epsilon value it's calibrated</div>
+          <!-- Studio Drawing Canvas (The Pen Display screen) -->
+          <div class="studio-screen-frame">
+            <canvas id="studio-main-canvas"></canvas>
+            
+            <!-- Real-time Stylus Telemetry Overlay inside Screen -->
+            <div class="screen-telemetry-hud">
+              <div class="telemetry-chip">
+                <span>Pressure:</span>
+                <strong id="hud-live-pressure">0</strong>
+                <small>/ 16384</small>
+              </div>
+              <div class="telemetry-chip">
+                <span>Tilt:</span>
+                <strong id="hud-live-tilt">0° / 0°</strong>
+              </div>
+              <div class="telemetry-chip">
+                <span>Spring Deflection:</span>
+                <strong id="hud-live-spring">0.0 px</strong>
+              </div>
+              <div class="telemetry-chip">
+                <span>Schneider Bézier:</span>
+                <strong class="text-green" id="hud-live-bezier">Active</strong>
+              </div>
             </div>
           </div>
 
         </div>
-      </aside>
+      </section>
+
+      <!-- ================= TAB 5: DIAGNOSTICS & G-CODE ================= -->
+      <section class="driver-page" id="page-diagnostics">
+        <div class="diagnostics-grid">
+          
+          <!-- Hardware Event Packet Inspector -->
+          <div class="driver-card diagnostic-card">
+            <div class="card-header">
+              <h3>Hardware Event Packet Stream</h3>
+              <span class="sub-pill">W3C PointerEvents + Wintab</span>
+            </div>
+            <div class="diag-terminal" id="diag-packet-stream">
+              <div class="packet-row">[INFO] XPPen Driver v3.4.8 initialized. Digitizer ready.</div>
+              <div class="packet-row">[INFO] Native coordinate resolution: 5080 LPI.</div>
+              <div class="packet-row text-green">[STATUS] Pyodide Python 3.12 WebAssembly runtime loaded.</div>
+            </div>
+          </div>
+
+          <!-- Generative Instruments & CNC G-Code Generator -->
+          <div class="driver-card gcode-engine-card">
+            <div class="card-header">
+              <h3>AxiDraw CNC Plotter &amp; 2-Opt TSP Optimizer</h3>
+              <button class="btn-driver-secondary" id="btn-run-diag-gen">Run Python Spiral Math</button>
+            </div>
+
+            <div class="gcode-preview-section">
+              <textarea id="diag-gcode-output" readonly spellcheck="false" class="driver-code-output">; XPPen Driver 2-Opt G-Code Output
+; Draw on the Pen Display Studio tab to generate toolpaths!
+G21 ; mm mode
+G90 ; absolute coordinates
+G00 Z5.00 F4500 ; Pen UP
+</textarea>
+              <div class="gcode-footer-actions">
+                <button class="btn-driver-primary" id="btn-download-diag-gcode">Download .GCODE File</button>
+                <button class="btn-driver-secondary" id="btn-copy-diag-gcode">Copy to Clipboard</button>
+              </div>
+            </div>
+          </div>
+
+        </div>
+      </section>
 
     </main>
 
-    <!-- Modal 1: Generative Physics Lab -->
-    <div class="modal-overlay hidden" id="modal-generative">
-      <div class="modal-card">
-        <div class="modal-header">
-          <div class="modal-title-group">
-            <span class="modal-icon">🌀</span>
-            <h2>Generative Pen Physics Lab</h2>
-          </div>
-          <button class="btn-close-modal" id="close-modal-generative">×</button>
-        </div>
-        <div class="modal-body">
-          <p class="modal-subtitle">Generate pure mathematical pen paths calculated in real-time by Python:</p>
-          
-          <div class="generative-cards-grid">
-            <div class="gen-card" data-gen="spiro">
-              <div class="gen-badge">Epicycloid Gears</div>
-              <h3>Spirograph Pen</h3>
-              <p>Simulates rolling brass gears with friction backlash and variable centrifugal nib pressure.</p>
-              <button class="btn-primary btn-run-gen" data-gen="spiro">Generate Spirograph</button>
-            </div>
-
-            <div class="gen-card" data-gen="lorenz">
-              <div class="gen-badge">Chaos Theory (RK4)</div>
-              <h3>Lorenz Attractor</h3>
-              <p>Edward Lorenz's strange attractor integrated with 4th-order Runge-Kutta. Depth maps to ink pressure.</p>
-              <button class="btn-primary btn-run-gen" data-gen="lorenz">Generate Lorenz Chaos</button>
-            </div>
-
-            <div class="gen-card" data-gen="harmonograph">
-              <div class="gen-badge">3 Pendulums</div>
-              <h3>Harmonograph Pen</h3>
-              <p>Victorian 3-pendulum mechanical drawing apparatus with exponential friction dampening.</p>
-              <button class="btn-primary btn-run-gen" data-gen="harmonograph">Generate Harmonograph</button>
-            </div>
-          </div>
-        </div>
+    <!-- 4. Driver Status Footer -->
+    <footer class="driver-statusbar">
+      <div class="statusbar-left">
+        <span class="device-icon">🖲️</span>
+        <span id="footer-connection-status">Connected: XPPen Artist Pro 16 (USB-C High Speed)</span>
+        <span class="divider-dot">•</span>
+        <span>Resolution: 5080 LPI</span>
+        <span class="divider-dot">•</span>
+        <span>Report Rate: 200 RPS</span>
       </div>
-    </div>
 
-    <!-- Modal 2: In-Browser Python REPL / Code Sandbox -->
-    <div class="modal-overlay hidden" id="modal-python">
-      <div class="modal-card wide-card">
-        <div class="modal-header">
-          <div class="modal-title-group">
-            <span class="modal-icon">💻</span>
-            <h2>In-Browser Python 3.12 Engine (Pyodide WebAssembly)</h2>
-          </div>
-          <button class="btn-close-modal" id="close-modal-python">×</button>
-        </div>
-        <div class="modal-body">
-          <p class="modal-subtitle">You can literally write Python here and run it live against the canvas:</p>
-          
-          <div class="code-editor-wrapper">
-            <textarea id="python-code-input" spellcheck="false" class="code-textarea"># XPpen In-Browser Python Studio Script
-import math
-
-print("Bro, running custom Python math directly on the canvas!")
-
-# Generate a custom Fibonacci golden spiral with pressure modulation
-cx, cy = 450, 350
-spiral_points = []
-for i in range(1200):
-    theta = i * 0.05
-    r = 2.2 * math.sqrt(i) * 5.0
-    x = cx + r * math.cos(theta)
-    y = cy + r * math.sin(theta)
-    p = 0.3 + 0.6 * math.sin(theta * 2.0)
-    spiral_points.append({"x": round(x, 2), "y": round(y, 2), "pressure": max(0.1, round(p, 3))})
-
-# Send points directly to canvas renderer
-render_stroke_on_canvas(spiral_points, "#00f2fe", 4.0)
-print(f"Generated {len(spiral_points)} Fibonacci spiral points in Python!")
-</textarea>
-          </div>
-
-          <div class="editor-actions">
-            <button class="btn-primary" id="btn-run-python-code">
-              <span>▶</span> Run Python in WebAssembly
-            </button>
-            <button class="btn-secondary" id="btn-reset-python-code">Reset Script</button>
-            <span class="editor-output-status" id="python-run-output">Ready.</span>
-          </div>
-        </div>
+      <div class="statusbar-right">
+        <button class="btn-status-action" id="btn-driver-defaults">Restore Defaults</button>
+        <button class="btn-status-action btn-red" id="btn-driver-apply">Apply &amp; Save</button>
       </div>
-    </div>
-
-    <!-- Modal 3: G-Code Plotter & 2-Opt TSP Inspector -->
-    <div class="modal-overlay hidden" id="modal-gcode">
-      <div class="modal-card wide-card">
-        <div class="modal-header">
-          <div class="modal-title-group">
-            <span class="modal-icon">🤖</span>
-            <h2>AxiDraw &amp; CNC Pen Plotter G-Code Engine</h2>
-          </div>
-          <button class="btn-close-modal" id="close-modal-gcode">×</button>
-        </div>
-        <div class="modal-body">
-          <div class="gcode-layout">
-            <div class="gcode-visualizer-box">
-              <div class="gcode-vis-header">
-                <span>Vector Stroke &amp; Air-Travel Preview</span>
-                <span class="tag-opt">TSP 2-Opt Optimized</span>
-              </div>
-              <canvas id="gcode-preview-canvas" width="480" height="320"></canvas>
-              <div class="gcode-legend">
-                <span class="legend-item"><span class="dot-draw"></span> Pen DOWN (Draw)</span>
-                <span class="legend-item"><span class="dot-travel"></span> Pen UP (Rapid Air Travel)</span>
-              </div>
-            </div>
-
-            <div class="gcode-text-box">
-              <div class="gcode-stats-grid">
-                <div class="gcode-stat">
-                  <span>Total Strokes</span>
-                  <strong id="gcode-stat-strokes">0</strong>
-                </div>
-                <div class="gcode-stat">
-                  <span>Air-Travel Saved</span>
-                  <strong class="text-green" id="gcode-stat-saved">~48%</strong>
-                </div>
-              </div>
-              <textarea id="gcode-output-area" readonly spellcheck="false" class="gcode-textarea">; Generating 2-Opt G-code...</textarea>
-              <div class="gcode-actions">
-                <button class="btn-primary" id="btn-download-gcode-file">Download .GCODE File</button>
-                <button class="btn-secondary" id="btn-copy-gcode">Copy to Clipboard</button>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
+    </footer>
 
   </div>
 
-  <!-- Main JavaScript Controller -->
   <script src="app.js"></script>
 </body>
 </html>
