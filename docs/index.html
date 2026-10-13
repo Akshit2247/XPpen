@@ -2,85 +2,382 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0">
-  <title>XP·PEN Digital Stylus Simulator (Mouse-Adaptive 8192 LPI)</title>
+  <title>XP·PEN Digital Stylus Simulator (Mouse-Adaptive 8192 LPI + Audio ASMR)</title>
   <style>
-    *{box-sizing:border-box;margin:0;padding:0;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;user-select:none}
-    body{background:#0e1014;color:#f0f2f5;height:100vh;display:flex;flex-direction:column;overflow:hidden}
-    header{height:42px;background:#121318;border-bottom:1px solid #282b36;display:flex;align-items:center;justify-content:space-between;padding:0 14px}
-    .brand{font-size:14px;font-weight:800}.brand span{color:#e50012}
-    .badge{background:#181a21;border:1px solid #2e3340;font-size:10px;padding:2px 8px;border-radius:3px;color:#10b981;font-family:monospace}
-    .bar{height:42px;background:#15171e;border-bottom:1px solid #282b36;display:flex;align-items:center;justify-content:space-between;padding:0 14px;gap:8px;font-size:11px;font-weight:600}
-    .group{display:flex;align-items:center;gap:10px}
-    input[type=range]{width:70px;height:3px;accent-color:#e50012;cursor:pointer}
-    .btn{background:#1f222b;border:1px solid #2f3442;color:#fff;font-size:11px;font-weight:600;padding:4px 9px;border-radius:3px;cursor:pointer}
-    .btn:hover{background:#2a2e3a}.btn-red{background:#e50012;border-color:#e50012}.btn-red:hover{background:#ff1a2b}
-    main{flex:1;position:relative;background:radial-gradient(circle at center,#171922 0%,#0c0d11 100%);overflow:hidden;cursor:crosshair}
-    canvas{position:absolute;inset:0;width:100%;height:100%;touch-action:none}
-    .frame{position:absolute;inset:20px;border:1px solid rgba(255,255,255,.05);border-radius:6px;pointer-events:none}
-    .hud{position:absolute;bottom:14px;left:14px;display:flex;gap:8px;pointer-events:none}
-    .card{background:rgba(18,20,26,.92);border:1px solid #2b2f3d;padding:5px 10px;border-radius:4px;font-size:11px;display:flex;align-items:center;gap:6px}
-    .card span{color:#7f8799}.card strong{font-family:monospace;color:#fff}
-    .p-track{width:90px;height:6px;background:#090a0d;border-radius:2px;overflow:hidden;border:1px solid #333}
-    .p-fill{height:100%;width:0%;background:linear-gradient(90deg,#10b981,#f59e0b,#e50012)}
-    .hint{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);color:#363a47;font-size:12px;font-weight:700;pointer-events:none;text-align:center;line-height:1.5}
+    :root {
+      --bg-dark: #0d0f14;
+      --bg-panel: #151821;
+      --bg-card: #1e222d;
+      --border: #2a2e3d;
+      --red: #e50012;
+      --text: #f0f2f5;
+      --muted: #80889c;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; user-select: none; }
+    body { background: var(--bg-dark); color: var(--text); height: 100vh; display: flex; flex-direction: column; overflow: hidden; }
+
+    header { height: 42px; background: #111318; border-bottom: 1px solid var(--border); display: flex; align-items: center; justify-content: space-between; padding: 0 16px; flex-shrink: 0; }
+    .brand { font-size: 14px; font-weight: 800; } .brand span { color: var(--red); }
+    .badge { background: #191c24; border: 1px solid #303544; font-size: 11px; padding: 2px 8px; border-radius: 4px; color: #10b981; font-family: monospace; display: flex; align-items: center; gap: 6px; }
+    .badge-dot { width: 6px; height: 6px; border-radius: 50%; background: #10b981; box-shadow: 0 0 6px #10b981; }
+
+    .toolbar { height: 46px; background: var(--bg-panel); border-bottom: 1px solid var(--border); display: flex; align-items: center; justify-content: space-between; padding: 0 16px; gap: 12px; font-size: 11px; font-weight: 600; flex-shrink: 0; }
+    .group { display: flex; align-items: center; gap: 10px; }
+    
+    /* Color Swatches */
+    .color-swatches { display: flex; align-items: center; gap: 6px; }
+    .swatch { width: 18px; height: 18px; border-radius: 50%; border: 2px solid transparent; cursor: pointer; transition: transform 0.15s; }
+    .swatch:hover { transform: scale(1.18); }
+    .swatch.active { border-color: #fff; box-shadow: 0 0 6px rgba(255,255,255,0.4); }
+    .custom-color { width: 20px; height: 20px; border: none; background: none; cursor: pointer; border-radius: 50%; }
+
+    /* Sliders & Buttons */
+    input[type=range] { width: 65px; height: 3px; accent-color: var(--red); cursor: pointer; }
+    .btn { background: var(--bg-card); border: 1px solid var(--border); color: #fff; font-size: 11px; font-weight: 600; padding: 4px 10px; border-radius: 4px; cursor: pointer; transition: all 0.15s; }
+    .btn:hover { background: #2a2e3a; border-color: #3f4556; }
+    .btn-red { background: var(--red); border-color: var(--red); }
+    .btn-red:hover { background: #ff1a2b; }
+    .btn-sound.active { color: #10b981; border-color: #10b981; background: rgba(16, 185, 129, 0.12); }
+
+    /* Drawing Canvas Area */
+    main { flex: 1; position: relative; background: radial-gradient(circle at center, #161821 0%, #0a0b0f 100%); overflow: hidden; cursor: crosshair; }
+    canvas { position: absolute; inset: 0; width: 100%; height: 100%; touch-action: none; }
+    .frame { position: absolute; inset: 20px; border: 1px solid rgba(255,255,255,.04); border-radius: 6px; pointer-events: none; }
+
+    /* Floating Nib Cursor */
+    .nib-cursor { position: absolute; width: 12px; height: 12px; border-radius: 50%; border: 1.5px solid rgba(255, 255, 255, 0.7); transform: translate(-50%, -50%); pointer-events: none; transition: width 0.05s, height 0.05s; display: none; }
+
+    /* HUD */
+    .hud { position: absolute; bottom: 14px; left: 16px; display: flex; gap: 8px; pointer-events: none; }
+    .card { background: rgba(18, 20, 26, 0.92); border: 1px solid var(--border); padding: 5px 11px; border-radius: 4px; font-size: 11px; display: flex; align-items: center; gap: 6px; box-shadow: 0 4px 12px rgba(0,0,0,0.4); }
+    .card span { color: var(--muted); }
+    .card strong { font-family: monospace; color: #fff; }
+    .p-track { width: 90px; height: 6px; background: #08090c; border-radius: 2px; overflow: hidden; border: 1px solid #333; }
+    .p-fill { height: 100%; width: 0%; background: linear-gradient(90deg, #10b981, #f59e0b, var(--red)); }
+
+    /* Wheel Notification Toast */
+    .wheel-toast { position: absolute; top: 16px; left: 50%; transform: translateX(-50%); background: rgba(14, 16, 22, 0.92); border: 1px solid var(--border); padding: 6px 14px; border-radius: 20px; font-size: 11px; color: #f0f2f5; pointer-events: none; opacity: 0; transition: opacity 0.3s; font-family: monospace; }
+    .wheel-toast.show { opacity: 1; }
+
+    .hint { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); color: #353946; font-size: 12px; font-weight: 700; pointer-events: none; text-align: center; line-height: 1.6; letter-spacing: 0.5px; }
+    .hint small { color: #4b5163; font-weight: 500; font-size: 11px; }
   </style>
 </head>
 <body>
+
   <header>
-    <div class="brand">XP<span>·PEN</span> <small style="color:#7f8799;font-size:10px;font-weight:400">Digitizer Simulator</small></div>
-    <div class="badge">● Mouse Velocity Dynamics (8192 LPI)</div>
+    <div class="brand">XP<span>·PEN</span> <small style="color:#788094;font-size:10px;font-weight:400">Digitizer Audio-Physics Simulator</small></div>
+    <div class="badge"><span class="badge-dot"></span> 8192 LPI Mouse Velocity + Audio Active</div>
   </header>
-  <div class="bar">
+
+  <div class="toolbar">
     <div class="group">
-      <label>Speed Sens: <input type="range" id="sens" min="0.5" max="3" step="0.1" value="1.4"></label>
-      <label>Nib Spring: <input type="range" id="spk" min="0.1" max="1" step="0.05" value="0.45"></label>
-      <input type="color" id="col" value="#e50012" style="width:20px;height:20px;border:none;background:none;cursor:pointer">
+      <!-- Color Palette -->
+      <span style="color:var(--muted)">Color:</span>
+      <div class="color-swatches">
+        <div class="swatch active" style="background:#e50012" data-color="#e50012" title="XPPen Red"></div>
+        <div class="swatch" style="background:#00f2fe" data-color="#00f2fe" title="Electric Cyan"></div>
+        <div class="swatch" style="background:#10b981" data-color="#10b981" title="Emerald Glow"></div>
+        <div class="swatch" style="background:#f59e0b" data-color="#f59e0b" title="Amber Gold"></div>
+        <div class="swatch" style="background:#8b5cf6" data-color="#8b5cf6" title="Ultraviolet"></div>
+        <div class="swatch" style="background:#ffffff" data-color="#ffffff" title="Titanium White"></div>
+        <input type="color" id="custom-color" class="custom-color" value="#e50012" title="Custom Hex">
+      </div>
+
+      <!-- Brush Mode -->
+      <span style="color:var(--muted);margin-left:4px">Brush:</span>
+      <select id="brush-mode" style="background:var(--bg-card);color:#fff;border:1px solid var(--border);border-radius:3px;padding:2px 6px;font-size:11px;outline:none;cursor:pointer">
+        <option value="ink">Fluid Ink Pen</option>
+        <option value="chisel">Gothic Chisel</option>
+        <option value="pencil">Chalk / Charcoal</option>
+      </select>
+      
+      <label style="color:var(--muted);margin-left:4px">Sens: <input type="range" id="sens" min="0.5" max="3" step="0.1" value="1.4"></label>
     </div>
+
     <div class="group">
-      <button class="btn btn-red" id="btn-orb">⚡ Physics Orbit</button>
+      <button class="btn btn-sound active" id="btn-sound" title="Toggle real paper scratching audio">🔊 Sound</button>
+      <button class="btn btn-red" id="btn-orb" title="Simulate 3-pendulum physics orbit">⚡ Physics Orbit</button>
       <button class="btn" id="btn-und">↩ Undo</button>
       <button class="btn" id="btn-clr">🧹 Clear</button>
       <button class="btn" id="btn-exp">💾 Save SVG</button>
     </div>
   </div>
+
   <main>
     <canvas id="cv"></canvas>
     <div class="frame"></div>
-    <div class="hint" id="hint">DRAW WITH MOUSE OR STYLUS<br><small style="color:#494f61;font-weight:500">Move slow for thick ink, flick fast for hairlines • Mouse wheel dials line weight</small></div>
+    <div class="nib-cursor" id="nib-cursor"></div>
+
+    <div class="wheel-toast" id="wheel-toast">🖱️ Scroll Wheel: Line Weight Dial (1.0x)</div>
+
+    <div class="hint" id="hint">
+      DRAW WITH MOUSE OR STYLUS • 8192 PRESSURE DYNAMICS
+      <br><small>• Fast flick = hairline stroke | Slow movement = thick saturated ink<br>• Scroll mouse wheel anytime to dial line weight thickness up or down</small>
+    </div>
+
     <div class="hud">
       <div class="card"><span>Pressure:</span><div class="p-track"><div class="p-fill" id="bar"></div></div><strong id="hp">0 / 8192</strong></div>
       <div class="card"><span>Speed:</span><strong id="hsp">0 px/s</strong></div>
-      <div class="card"><span>Wheel:</span><strong id="hwh">1.0x</strong></div>
+      <div class="card" title="Scroll mouse wheel to scale pressure/weight"><span>Wheel Dial:</span><strong id="hwh">1.0x</strong></div>
     </div>
   </main>
+
   <script>
-    const cv=document.getElementById('cv'),ctx=cv.getContext('2d'),bar=document.getElementById('bar'),hp=document.getElementById('hp'),hsp=document.getElementById('hsp'),hwh=document.getElementById('hwh'),hint=document.getElementById('hint');
-    let pen={x:0,y:0,vx:0,vy:0,p:0,down:false},ms={x:0,y:0,lx:0,ly:0,lt:0,spd:0,hwP:0},wSc=1.0,strokes=[],cur=[],oAnim=null;
-    function rsz(){const r=cv.getBoundingClientRect(),d=window.devicePixelRatio||1;cv.width=r.width*d;cv.height=r.height*d;ctx.scale(d,d);redr()}
-    window.addEventListener('resize',rsz);setTimeout(rsz,40);
-    function tick(){
-      const k=+document.getElementById('spk').value,sens=+document.getElementById('sens').value;
-      const dx=ms.x-pen.x,dy=ms.y-pen.y;
-      pen.vx+=(k*dx*60-0.38*pen.vx*30)*0.016;pen.vy+=(k*dy*60-0.38*pen.vy*30)*0.016;
-      pen.x+=pen.vx*0.016;pen.y+=pen.vy*0.016;
-      let tp=0;if(pen.down){tp=ms.hwP>0?ms.hwP:Math.max(0.12,Math.min(1.0,(1.0-Math.min(1.0,ms.spd/(1200/sens))*0.82)*wSc))}
-      pen.p+=(pen.down?0.30:0.15)*(tp-pen.p);
-      if(pen.down&&Math.hypot(dx,dy)>0.2){cur.push({x:pen.x,y:pen.y,p:pen.p,c:document.getElementById('col').value});seg(cur)}
-      hp.textContent=`${Math.round(pen.p*8191)} / 8192`;bar.style.width=`${Math.round(pen.p*100)}%`;hsp.textContent=`${Math.round(ms.spd)} px/s`;hwh.textContent=`${wSc.toFixed(1)}x`;
+    const cv = document.getElementById('cv'), ctx = cv.getContext('2d');
+    const bar = document.getElementById('bar'), hp = document.getElementById('hp'), hsp = document.getElementById('hsp'), hwh = document.getElementById('hwh');
+    const hint = document.getElementById('hint'), toast = document.getElementById('wheel-toast'), nibCur = document.getElementById('nib-cursor');
+    
+    let pen = { x: 0, y: 0, vx: 0, vy: 0, p: 0, down: false };
+    let ms = { x: 0, y: 0, lx: 0, ly: 0, lt: 0, spd: 0, hwP: 0 };
+    let wheelScale = 1.0, activeColor = '#e50012', brushMode = 'ink';
+    let strokes = [], cur = [], oAnim = null, soundEnabled = true, toastTimer = null;
+
+    // --- Web Audio API Paper Friction ASMR ---
+    let audioCtx = null, noiseNode = null, noiseFilter = null, noiseGain = null;
+    function initAudio() {
+      if (audioCtx) return;
+      try {
+        const AC = window.AudioContext || window.webkitAudioContext;
+        audioCtx = new AC();
+        const buf = audioCtx.createBuffer(1, audioCtx.sampleRate, audioCtx.sampleRate);
+        const d = buf.getChannelData(0);
+        let b0 = 0, b1 = 0, b2 = 0;
+        for (let i = 0; i < audioCtx.sampleRate; i++) {
+          const w = Math.random() * 2 - 1;
+          b0 = 0.997 * b0 + w * 0.05;
+          b1 = 0.985 * b1 + w * 0.08;
+          b2 = 0.950 * b2 + w * 0.15;
+          d[i] = (b0 + b1 + b2 + w * 0.2) * 0.06;
+        }
+        noiseNode = audioCtx.createBufferSource();
+        noiseNode.buffer = buf;
+        noiseNode.loop = true;
+        noiseFilter = audioCtx.createBiquadFilter();
+        noiseFilter.type = 'bandpass';
+        noiseFilter.frequency.value = 1400;
+        noiseFilter.Q.value = 1.5;
+        noiseGain = audioCtx.createGain();
+        noiseGain.gain.value = 0;
+        noiseNode.connect(noiseFilter);
+        noiseFilter.connect(noiseGain);
+        noiseGain.connect(audioCtx.destination);
+        noiseNode.start();
+      } catch (err) {}
+    }
+
+    function updateAudio(speed, pressure) {
+      if (!soundEnabled || !noiseGain || !audioCtx) return;
+      // Volume scales dynamically with pen pressure and speed
+      const targetVol = pen.down ? Math.min(0.28, (speed * 0.0003 + 0.02) * pressure * 0.6) : 0;
+      noiseGain.gain.setTargetAtTime(targetVol, audioCtx.currentTime, 0.025);
+      // Resonant frequency shifts with pressure (deep heavy scratch vs high crisp flick)
+      const freq = Math.max(650, Math.min(3200, 1850 - pressure * 600 + speed * 1.3));
+      noiseFilter.frequency.setTargetAtTime(freq, audioCtx.currentTime, 0.025);
+    }
+
+    function rsz() {
+      const r = cv.getBoundingClientRect(), d = window.devicePixelRatio || 1;
+      cv.width = r.width * d; cv.height = r.height * d;
+      ctx.scale(d, d); redr();
+    }
+    window.addEventListener('resize', rsz); setTimeout(rsz, 40);
+
+    // Physical loop (60Hz)
+    function tick() {
+      const sens = +document.getElementById('sens').value;
+      const dx = ms.x - pen.x, dy = ms.y - pen.y;
+
+      // Spring-mass-damper acceleration
+      pen.vx += (0.45 * dx * 60 - 0.38 * pen.vx * 30) * 0.016;
+      pen.vy += (0.45 * dy * 60 - 0.38 * pen.vy * 30) * 0.016;
+      pen.x += pen.vx * 0.016; pen.y += pen.vy * 0.016;
+
+      // Velocity-Adaptive Pressure
+      let tp = 0;
+      if (pen.down) {
+        if (ms.hwP > 0) tp = ms.hwP;
+        else {
+          const spdFactor = Math.min(1.0, ms.spd / (1200 / sens));
+          tp = Math.max(0.12, Math.min(1.0, (1.0 - spdFactor * 0.82) * wheelScale));
+        }
+      }
+      pen.p += (pen.down ? 0.30 : 0.15) * (tp - pen.p);
+
+      if (pen.down && Math.hypot(dx, dy) > 0.2) {
+        cur.push({ x: pen.x, y: pen.y, p: pen.p, c: activeColor, m: brushMode });
+        seg(cur);
+      }
+
+      // HUD and Nib Cursor updates
+      hp.textContent = `${Math.round(pen.p * 8191)} / 8192`;
+      bar.style.width = `${Math.round(pen.p * 100)}%`;
+      hsp.textContent = `${Math.round(ms.spd)} px/s`;
+      hwh.textContent = `${wheelScale.toFixed(1)}x`;
+
+      const curSize = Math.max(4, pen.p * 20 * wheelScale);
+      nibCur.style.left = `${pen.x}px`;
+      nibCur.style.top = `${pen.y}px`;
+      nibCur.style.width = `${curSize}px`;
+      nibCur.style.height = `${curSize}px`;
+      nibCur.style.borderColor = activeColor;
+
+      updateAudio(ms.spd, pen.p);
       requestAnimationFrame(tick);
     }
     requestAnimationFrame(tick);
-    function seg(s){if(s.length<2)return;const a=s[s.length-2],b=s[s.length-1];ctx.save();ctx.strokeStyle=b.c;ctx.lineCap='round';ctx.lineJoin='round';ctx.lineWidth=Math.max(1.5,b.p*16);ctx.beginPath();ctx.moveTo(a.x,a.y);ctx.lineTo(b.x,b.y);ctx.stroke();ctx.restore()}
-    function redr(){ctx.clearRect(0,0,cv.clientWidth,cv.clientHeight);for(const s of strokes){for(let i=1;i<s.length;i++)seg(s.slice(0,i+1))}}
-    cv.addEventListener('pointerdown',e=>{e.preventDefault();cv.setPointerCapture(e.pointerId);hint.style.display='none';const r=cv.getBoundingClientRect(),x=e.clientX-r.left,y=e.clientY-r.top;ms.x=pen.x=ms.lx=x;ms.y=pen.y=ms.ly=y;ms.lt=performance.now();ms.spd=0;ms.hwP=(e.pointerType==='pen'&&e.pressure>0)?e.pressure:0;pen.down=true;pen.p=0.5*wSc;cur=[{x,y,p:pen.p,c:document.getElementById('col').value}]});
-    cv.addEventListener('pointermove',e=>{const r=cv.getBoundingClientRect(),x=e.clientX-r.left,y=e.clientY-r.top,n=performance.now(),dt=Math.max(1,n-ms.lt)/1000;ms.spd=Math.hypot(x-ms.lx,y-ms.ly)/dt;ms.x=ms.lx=x;ms.y=ms.ly=y;ms.lt=n;ms.hwP=(e.pointerType==='pen'&&e.pressure>0)?e.pressure:0});
-    const stop=()=>{if(pen.down&&cur.length>1)strokes.push([...cur]);pen.down=false;cur=[];ms.spd=0};cv.addEventListener('pointerup',stop);cv.addEventListener('pointercancel',stop);
-    cv.addEventListener('wheel',e=>{e.preventDefault();wSc=Math.max(0.4,Math.min(2.5,wSc+(e.deltaY>0?-0.1:0.1)))},{passive:false});
-    document.getElementById('btn-clr').addEventListener('click',()=>{strokes=[];cur=[];redr();hint.style.display='block'});
-    document.getElementById('btn-und').addEventListener('click',()=>{if(strokes.length){strokes.pop();redr()}});
-    document.getElementById('btn-orb').addEventListener('click',()=>{hint.style.display='none';if(oAnim)cancelAnimationFrame(oAnim);const cx=cv.clientWidth/2,cy=cv.clientHeight/2;let t=0;cur=[];pen.down=true;function step(){const a=t*0.038,d=Math.exp(-0.0007*t);ms.x=cx+220*Math.sin(2*a)*d;ms.y=cy+130*Math.sin(3*a+1.57)*d;ms.spd=300+400*Math.sin(a*2);t++;if(t<720)oAnim=requestAnimationFrame(step);else stop()}step()});
-    document.getElementById('btn-exp').addEventListener('click',()=>{if(!strokes.length)return alert('Canvas empty!');let s=`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${cv.clientWidth} ${cv.clientHeight}" width="${cv.clientWidth}" height="${cv.clientHeight}" style="background:#0e1014">\n`;for(const st of strokes){for(let i=1;i<st.length;i++){const a=st[i-1],b=st[i];s+=`  <line x1="${a.x.toFixed(1)}" y1="${a.y.toFixed(1)}" x2="${b.x.toFixed(1)}" y2="${b.y.toFixed(1)}" stroke="${b.c}" stroke-width="${Math.max(1.5,b.p*16).toFixed(1)}" stroke-linecap="round"/>\n`}}s+='</svg>';const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([s],{type:'image/svg+xml'}));a.download='xppen_drawing.svg';a.click()});
-    window.addEventListener('keydown',e=>{if((e.ctrlKey||e.metaKey)&&e.key==='z')document.getElementById('btn-und').click()});
+
+    // Segment rendering with brush styles
+    function seg(s) {
+      if (s.length < 2) return;
+      const a = s[s.length - 2], b = s[s.length - 1];
+      ctx.save();
+      ctx.strokeStyle = b.c;
+      ctx.fillStyle = b.c;
+      ctx.lineCap = 'round';
+      ctx.lineJoin = 'round';
+
+      if (b.m === 'chisel') {
+        const hw = (b.p * 12) * 0.707;
+        ctx.beginPath();
+        ctx.moveTo(a.x - hw, a.y - hw); ctx.lineTo(a.x + hw, a.y + hw);
+        ctx.lineTo(b.x + hw, b.y + hw); ctx.lineTo(b.x - hw, b.y - hw);
+        ctx.closePath(); ctx.fill();
+      } else if (b.m === 'pencil') {
+        ctx.lineWidth = Math.max(1.0, b.p * 14);
+        ctx.globalAlpha = 0.75;
+        ctx.beginPath(); ctx.moveTo(a.x, a.y); ctx.lineTo(b.x, b.y); ctx.stroke();
+      } else {
+        ctx.lineWidth = Math.max(1.5, b.p * 18);
+        ctx.beginPath(); ctx.moveTo(a.x, a.y); ctx.lineTo(b.x, b.y); ctx.stroke();
+      }
+      ctx.restore();
+    }
+
+    function redr() {
+      ctx.clearRect(0, 0, cv.clientWidth, cv.clientHeight);
+      for (const s of strokes) {
+        for (let i = 1; i < s.length; i++) seg(s.slice(0, i + 1));
+      }
+    }
+
+    // Pointer events
+    cv.addEventListener('pointerenter', () => { nibCur.style.display = 'block'; });
+    cv.addEventListener('pointerleave', () => { nibCur.style.display = 'none'; });
+
+    cv.addEventListener('pointerdown', e => {
+      e.preventDefault(); cv.setPointerCapture(e.pointerId);
+      hint.style.display = 'none';
+      initAudio();
+
+      const r = cv.getBoundingClientRect(), x = e.clientX - r.left, y = e.clientY - r.top;
+      ms.x = pen.x = ms.lx = x; ms.y = pen.y = ms.ly = y;
+      ms.lt = performance.now(); ms.spd = 0;
+      ms.hwP = (e.pointerType === 'pen' && e.pressure > 0) ? e.pressure : 0;
+      pen.down = true; pen.p = 0.5 * wheelScale;
+      cur = [{ x, y, p: pen.p, c: activeColor, m: brushMode }];
+    });
+
+    cv.addEventListener('pointermove', e => {
+      const r = cv.getBoundingClientRect(), x = e.clientX - r.left, y = e.clientY - r.top;
+      const n = performance.now(), dt = Math.max(1, n - ms.lt) / 1000;
+      ms.spd = Math.hypot(x - ms.lx, y - ms.ly) / dt;
+      ms.x = ms.lx = x; ms.y = ms.ly = y; ms.lt = n;
+      ms.hwP = (e.pointerType === 'pen' && e.pressure > 0) ? e.pressure : 0;
+    });
+
+    const stop = () => {
+      if (pen.down && cur.length > 1) strokes.push([...cur]);
+      pen.down = false; cur = []; ms.spd = 0;
+    };
+    cv.addEventListener('pointerup', stop);
+    cv.addEventListener('pointercancel', stop);
+
+    // Scroll Wheel: Modulates pen pressure and line weight with visual explanation toast!
+    cv.addEventListener('wheel', e => {
+      e.preventDefault();
+      const delta = e.deltaY > 0 ? -0.1 : 0.1;
+      wheelScale = Math.max(0.4, Math.min(2.5, wheelScale + delta));
+      
+      toast.textContent = `🖱️ Wheel Dial: ${wheelScale.toFixed(1)}x Line Weight (${delta > 0 ? 'Thinner' : 'Thicker'})`;
+      toast.classList.add('show');
+      clearTimeout(toastTimer);
+      toastTimer = setTimeout(() => toast.classList.remove('show'), 1200);
+    }, { passive: false });
+
+    // Color Swatch pickers
+    document.querySelectorAll('.swatch').forEach(sw => {
+      sw.addEventListener('click', () => {
+        document.querySelectorAll('.swatch').forEach(s => s.classList.remove('active'));
+        sw.classList.add('active');
+        activeColor = sw.dataset.color;
+      });
+    });
+    document.getElementById('custom-color').addEventListener('input', e => {
+      activeColor = e.target.value;
+      document.querySelectorAll('.swatch').forEach(s => s.classList.remove('active'));
+    });
+
+    // Brush Mode dropdown
+    document.getElementById('brush-mode').addEventListener('change', e => {
+      brushMode = e.target.value;
+    });
+
+    // Sound toggle button
+    document.getElementById('btn-sound').addEventListener('click', function() {
+      soundEnabled = !soundEnabled;
+      this.classList.toggle('active', soundEnabled);
+      this.textContent = soundEnabled ? '🔊 Sound' : '🔇 Muted';
+      if (soundEnabled) initAudio();
+    });
+
+    // Actions
+    document.getElementById('btn-clr').addEventListener('click', () => {
+      strokes = []; cur = []; redr(); hint.style.display = 'block';
+    });
+    document.getElementById('btn-und').addEventListener('click', () => {
+      if (strokes.length) { strokes.pop(); redr(); }
+    });
+
+    // Autonomous Physics Orbit (Harmonograph Simulation)
+    document.getElementById('btn-orb').addEventListener('click', () => {
+      hint.style.display = 'none'; initAudio();
+      if (oAnim) cancelAnimationFrame(oAnim);
+      const cx = cv.clientWidth / 2, cy = cv.clientHeight / 2;
+      let t = 0; cur = []; pen.down = true;
+
+      function step() {
+        const a = t * 0.038, d = Math.exp(-0.0007 * t);
+        ms.x = cx + 220 * Math.sin(2 * a) * d;
+        ms.y = cy + 130 * Math.sin(3 * a + 1.57) * d;
+        ms.spd = 300 + 400 * Math.sin(a * 2);
+        t++;
+        if (t < 720) oAnim = requestAnimationFrame(step);
+        else stop();
+      }
+      step();
+    });
+
+    // SVG Export
+    document.getElementById('btn-exp').addEventListener('click', () => {
+      if (!strokes.length) return alert('Canvas is empty! Draw something first.');
+      let s = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${cv.clientWidth} ${cv.clientHeight}" width="${cv.clientWidth}" height="${cv.clientHeight}" style="background:#0d0f14">\n`;
+      for (const st of strokes) {
+        for (let i = 1; i < st.length; i++) {
+          const a = st[i - 1], b = st[i];
+          s += `  <line x1="${a.x.toFixed(1)}" y1="${a.y.toFixed(1)}" x2="${b.x.toFixed(1)}" y2="${b.y.toFixed(1)}" stroke="${b.c}" stroke-width="${Math.max(1.5, b.p * 18).toFixed(1)}" stroke-linecap="round"/>\n`;
+        }
+      }
+      s += '</svg>';
+      const a = document.createElement('a');
+      a.href = URL.createObjectURL(new Blob([s], { type: 'image/svg+xml' }));
+      a.download = 'xppen_drawing.svg';
+      a.click();
+    });
+
+    window.addEventListener('keydown', e => {
+      if ((e.ctrlKey || e.metaKey) && e.key === 'z') document.getElementById('btn-und').click();
+    });
   </script>
 </body>
 </html>
