@@ -23,8 +23,9 @@
 
 **You don't even need a backend server.** Thanks to **Pyodide (WebAssembly Python 3.12)**, the entire Python physics and math engine runs client-side right inside any modern browser!
 
+- **Live Web Deployment**: **[https://akshit2247.github.io/XPpen/](https://akshit2247.github.io/XPpen/)**
 - **Local Web Studio**: Run `python -m http.server 8000 --directory web` or `python -m xppen.server`, then open [http://localhost:8000](http://localhost:8000).
-- **GitHub Pages Ready**: Push this repository to GitHub and GitHub Actions will automatically deploy it to `https://<your-username>.github.io/XPpen/`!
+- **GitHub Pages Ready**: Both GitHub Actions (`.github/workflows/deploy-pages.yml`) and GitHub Pages `/docs` folder are configured for 100% instant deployment!
 
 ---
 
