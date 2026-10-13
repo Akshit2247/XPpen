@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0">
+  <title>XP·PEN Hardware Stylus Simulation</title>
+  <style>
+    *{box-sizing:border-box;margin:0;padding:0;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;user-select:none}
+    body{background:#0c0d10;color:#d6dae5;height:100vh;display:flex;flex-direction:column;overflow:hidden}
+    header{height:42px;background:#14151a;border-bottom:1px solid #242732;display:flex;align-items:center;justify-content:space-between;padding:0 14px}
+    .brand{font-size:14px;font-weight:800;color:#fff}.brand span{color:#e50012}
+    .badge{background:#1a1c22;border:1px solid #2e3340;font-size:10px;padding:2px 7px;border-radius:3px;color:#10b981;font-family:monospace}
+    .bar{height:40px;background:#181a21;border-bottom:1px solid #242732;display:flex;align-items:center;justify-content:space-between;padding:0 14px;gap:10px;font-size:11px;font-weight:600}
+    .ctl{display:flex;align-items:center;gap:12px}
+    input[type=range]{width:75px;accent-color:#e50012;height:3px;cursor:pointer}
+    button{background:#232630;border:1px solid #333845;color:#fff;font-size:11px;font-weight:600;padding:4px 9px;border-radius:3px;cursor:pointer}
+    button:hover{background:#2c303d}.btn-red{background:#e50012;border-color:#e50012}.btn-red:hover{background:#ff1a2b}
+    main{flex:1;position:relative;background:radial-gradient(circle at center,#16181f 0%,#0c0d10 100%);overflow:hidden;cursor:crosshair}
+    canvas{position:absolute;inset:0;width:100%;height:100%;touch-action:none}
+    .hud{position:absolute;bottom:12px;left:14px;display:flex;gap:8px;pointer-events:none}
+    .box{background:rgba(18,20,26,.9);border:1px solid #2a2e3a;padding:5px 10px;border-radius:3px;font-size:11px;display:flex;align-items:center;gap:6px}
+    .box span{color:#82899a}.box strong{font-family:monospace;color:#fff}
+    .p-bar{width:80px;height:6px;background:#090a0d;border-radius:2px;overflow:hidden;border:1px solid #2c303c}
+    .p-fill{height:100%;width:0%;background:linear-gradient(90deg,#10b981,#f59e0b,#e50012)}
+    .hint{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);color:#3a3e4d;font-size:12px;font-weight:600;pointer-events:none}
+  </style>
+</head>
+<body>
+  <header>
+    <div class="brand">XP<span>·PEN</span> <small style="color:#787f91;font-weight:400;font-size:10px">Digitizer Physics</small></div>
+    <div class="badge">● 8192 LPI Online</div>
+  </header>
+  <div class="bar">
+    <div class="ctl">
+      <label>Feel: <input type="range" id="feel" min="0.3" max="2.0" step="0.1" value="1.0"></label>
+      <label>Spring k: <input type="range" id="spk" min="0.1" max="1.0" step="0.05" value="0.45"></label>
+      <input type="color" id="col" value="#e50012" style="width:20px;height:20px;border:none;background:none;cursor:pointer">
+    </div>
+    <div class="ctl">
+      <button class="btn-red" id="btn-orb">⚡ Physics Orbit</button>
+      <button id="btn-clr">🧹 Clear</button>
+    </div>
+  </div>
+  <main>
+    <canvas id="cv"></canvas>
+    <div class="hint" id="hint">DRAW WITH STYLUS OR MOUSE • 8192 PRESSURE</div>
+    <div class="hud">
+      <div class="box"><span>Pressure:</span><div class="p-bar"><div class="p-fill" id="bf"></div></div><strong id="hp">0 / 8192</strong></div>
+      <div class="box"><span>Lag:</span><strong id="hl">0.0 px</strong></div>
+      <div class="box"><span>Tilt:</span><strong id="ht">0°</strong></div>
+    </div>
+  </main>
+  <script>
+    const cv=document.getElementById('cv'),ctx=cv.getContext('2d'),bf=document.getElementById('bf'),hp=document.getElementById('hp'),hl=document.getElementById('hl'),ht=document.getElementById('ht'),hint=document.getElementById('hint');
+    let pen={x:0,y:0,vx:0,vy:0,p:0,down:false},tgt={x:0,y:0,rawP:0,tilt:0},strokes=[],act=[],aid=null;
+    function rsz(){cv.width=cv.clientWidth*devicePixelRatio;cv.height=cv.clientHeight*devicePixelRatio;ctx.scale(devicePixelRatio,devicePixelRatio);redr()}
+    window.addEventListener('resize',rsz);setTimeout(rsz,40);
+    function loop(){
+      const k=+document.getElementById('spk').value,feel=+document.getElementById('feel').value;
+      const dx=tgt.x-pen.x,dy=tgt.y-pen.y;
+      pen.vx+=(k*dx*60-0.35*pen.vx*30)*0.016;pen.vy+=(k*dy*60-0.35*pen.vy*30)*0.016;
+      pen.x+=pen.vx*0.016;pen.y+=pen.vy*0.016;
+      pen.p+=0.25*(Math.pow(Math.max(0,Math.min(1,tgt.rawP)),feel)-pen.p);
+      if(pen.down&&Math.hypot(dx,dy)>0.1){act.push({x:pen.x,y:pen.y,p:pen.p,c:document.getElementById('col').value});seg(act)}
+      hp.textContent=`${Math.round(pen.p*8191)} / 8192`;bf.style.width=`${Math.round(pen.p*100)}%`;
+      hl.textContent=`${Math.hypot(dx,dy).toFixed(1)} px`;ht.textContent=`${Math.round(tgt.tilt)}°`;
+      requestAnimationFrame(loop);
+    }
+    requestAnimationFrame(loop);
+    function seg(s){if(s.length<2)return;const a=s[s.length-2],b=s[s.length-1];ctx.strokeStyle=b.c;ctx.lineCap='round';ctx.lineWidth=Math.max(1.2,b.p*13);ctx.beginPath();ctx.moveTo(a.x,a.y);ctx.lineTo(b.x,b.y);ctx.stroke()}
+    function redr(){ctx.clearRect(0,0,cv.width,cv.height);for(const s of strokes){for(let i=1;i<s.length;i++)seg(s.slice(0,i+1))}}
+    cv.addEventListener('pointerdown',e=>{e.preventDefault();cv.setPointerCapture(e.pointerId);hint.style.display='none';tgt.x=pen.x=e.clientX;tgt.y=pen.y=e.clientY;tgt.rawP=(e.pointerType==='pen'&&e.pressure>0)?e.pressure:0.6;tgt.tilt=Math.hypot(e.tiltX||0,e.tiltY||0);pen.down=true;act=[{x:pen.x,y:pen.y,p:tgt.rawP,c:document.getElementById('col').value}]});
+    cv.addEventListener('pointermove',e=>{if(!pen.down)return;tgt.x=e.clientX;tgt.y=e.clientY;tgt.rawP=(e.pointerType==='pen'&&e.pressure>0)?e.pressure:0.6;tgt.tilt=Math.hypot(e.tiltX||0,e.tiltY||0)});
+    const stp=()=>{if(pen.down&&act.length>1)strokes.push([...act]);pen.down=false;tgt.rawP=0;act=[]};
+    cv.addEventListener('pointerup',stp);cv.addEventListener('pointercancel',stp);
+    document.getElementById('btn-orb').addEventListener('click',()=>{hint.style.display='none';if(aid)cancelAnimationFrame(aid);const cx=cv.clientWidth/2,cy=cv.clientHeight/2;let s=0;act=[];pen.down=true;
+      function tk(){const t=s*0.035;tgt.x=cx+200*Math.sin(2*t)*Math.exp(-0.0006*s);tgt.y=cy+120*Math.sin(3*t+1.57)*Math.exp(-0.0006*s);tgt.rawP=0.25+0.65*Math.sin(t*1.5);s++;if(s<750)aid=requestAnimationFrame(tk);else stp()}tk()});
+    document.getElementById('btn-clr').addEventListener('click',()=>{strokes=[];act=[];redr();hint.style.display='block'});
+  </script>
+</body>
+</html>
