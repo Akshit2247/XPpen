@@ -24,7 +24,6 @@
 **You don't even need a backend server.** Thanks to **Pyodide (WebAssembly Python 3.12)**, the entire Python physics and math engine runs client-side right inside any modern browser!
 
 - **Live Web Deployment**: **[https://akshit2247.github.io/XPpen/](https://akshit2247.github.io/XPpen/)**
-- **Local Web Studio**: Run `python -m http.server 8000 --directory web` or `python -m xppen.server`, then open [http://localhost:8000](http://localhost:8000).
 - **GitHub Pages Ready**: Both GitHub Actions (`.github/workflows/deploy-pages.yml`) and GitHub Pages `/docs` folder are configured for 100% instant deployment!
 
 ---
@@ -108,37 +107,6 @@ python -m http.server 8000 --directory web
 python -m xppen.server
 ```
 Visit **[http://localhost:8000](http://localhost:8000)** in your browser!
-
----
-
-## 🌐 Uploading to GitHub & GitHub Pages
-
-Follow these simple steps to upload your repository to GitHub:
-
-### 1. Create a new repository on GitHub:
-Go to [github.com/new](https://github.com/new) and create a repository named **`XPpen`** (public).
-
-### 2. Add your remote and push:
-```bash
-# Add your GitHub repository as remote origin (replace YOUR_USERNAME with your GitHub username)
-git remote add origin https://github.com/YOUR_USERNAME/XPpen.git
-
-# Rename branch to main
-git branch -M main
-
-# Push code
-git push -u origin main
-```
-
-### 3. Enable GitHub Pages (Instant Web URL!):
-1. In your GitHub repository, go to **Settings** → **Pages**.
-2. Under **Build and deployment** → **Source**, select **GitHub Actions**.
-3. The included workflow [`.github/workflows/deploy-pages.yml`](.github/workflows/deploy-pages.yml) will automatically build and publish your web studio!
-4. Your live app will be accessible worldwide at:
-   ```text
-   https://YOUR_USERNAME.github.io/XPpen/
-   ```
-
 ---
 
 ## 📁 Repository Structure
@@ -173,7 +141,6 @@ XPpen/
 └── tests/
     └── test_xppen.py                   # Automated unit test suite
 ```
-
 ---
 
 ## 📜 License
